@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Attendance Tracker</title>
+
+  <!-- Installable web app (Add to Home Screen) -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Attendance">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <style>
+    :root {
+      --bg: #f5f6fa;
+      --surface: #ffffff;
+      --border: #e6e8ef;
+      --text: #111827;
+      --text-2: #4b5563;
+      --muted: #8a91a3;
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --primary-soft: #eef2ff;
+      --success: #16a34a;
+      --success-soft: #dcfce7;
+      --danger: #dc2626;
+      --danger-soft: #fee2e2;
+      --radius: 18px;
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+      --shadow-md: 0 20px 50px rgba(16, 24, 40, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 10% 5%, rgba(99, 102, 241, 0.12) 0, transparent 35%),
+        radial-gradient(circle at 90% 95%, rgba(16, 185, 129, 0.10) 0, transparent 35%),
+        var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font-family: inherit; }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: calc(24px + env(safe-area-inset-top, 0px));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .container { width: 100%; max-width: 430px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px 30px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .brand { text-align: center; margin-bottom: 30px; }
+
+    .brand-mark {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 16px;
+      border-radius: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      color: #ffffff;
+      font-size: 21px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.30);
+    }
+
+    .brand h1 { margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -0.025em; }
+    .brand p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .screen-title { margin: 0; font-size: 20px; line-height: 1.3; letter-spacing: -0.02em; }
+    .screen-description { margin: 8px 0 24px; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+
+    .field { margin-bottom: 18px; }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .field input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 1px solid #d5d9e3;
+      border-radius: 12px;
+      outline: none;
+      background: #ffffff;
+      color: var(--text);
+      font-size: 16px; /* 16px stops iOS from zooming into the field */
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.14); }
+
+    .primary-button {
+      width: 100%;
+      height: 48px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #5b52f0, #4f46e5);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.28);
+      transition: filter 0.15s, transform 0.08s;
+    }
+
+    .primary-button:hover { filter: brightness(1.06); }
+    .primary-button:active { transform: translateY(1px); }
+    .primary-button:disabled { background: #a5aac8; box-shadow: none; cursor: not-allowed; }
+
+    .info-box {
+      margin-top: 18px;
+      padding: 13px 14px;
+      border-radius: 11px;
+      background: #f8f9fc;
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .install-hint {
+      background: var(--primary-soft);
+      border-color: #c7cdfb;
+      color: var(--primary-dark);
+    }
+
+    .message {
+      display: none;
+      margin-bottom: 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .message.error { display: block; background: var(--danger-soft); border: 1px solid #f9c9c6; color: #b42318; }
+    .message.success { display: block; background: var(--success-soft); border: 1px solid #b6efcd; color: #067647; }
+
+    .welcome { text-align: center; padding: 8px 0 24px; }
+
+    .welcome-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--success-soft);
+      color: var(--success);
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .welcome h2 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+    .welcome p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
+    .status-card {
+      margin-top: 8px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fafbff;
+    }
+
+    .status-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .status-value { margin-top: 8px; font-size: 16px; font-weight: 600; }
+    .status-note { margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 520px) {
+      .page { padding: 16px; }
+      .card { padding: 30px 22px 26px; border-radius: 20px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="page">
+    <div class="container">
+      <div class="card">
+
+        <div class="brand">
+          <div class="brand-mark">AT</div>
+          <h1>Attendance Tracker</h1>
+          <p>Employee Attendance</p>
+        </div>
+
+
+        <!-- REGISTRATION SCREEN -->
+
+        <section id="registrationScreen" class="screen active">
+
+          <h2 class="screen-title">Register this device</h2>
+
+          <p class="screen-description">
+            Enter the registration code provided by your administrator
+            to connect this device to your employee account.
+          </p>
+
+          <div id="registrationMessage" class="message"></div>
+
+          <div class="field">
+            <label for="registrationCode">Registration Code</label>
+            <input
+              type="text"
+              id="registrationCode"
+              placeholder="ABCD-1234"
+              maxlength="9"
+              autocomplete="off"
+              autocapitalize="characters"
+            >
+          </div>
+
+          <button type="button" id="registerButton" class="primary-button">
+            Register This Device
+          </button>
+
+          <div class="info-box">
+            Your registration code is temporary and can only be used once.
+            If you have registered before and are seeing this screen again,
+            ask your administrator to reset your device.
+          </div>
+
+          <div id="installHint" class="info-box install-hint" style="display: none;">
+            <strong>Recommended on iPhone:</strong> tap the Share button in Safari,
+            choose <strong>Add to Home Screen</strong>, then open Attendance Tracker
+            from that icon <em>before</em> you register. This keeps your device
+            registration from being lost.
+          </div>
+
+        </section>
+
+
+        <!-- REGISTERED EMPLOYEE SCREEN -->
+
+        <section id="employeeScreen" class="screen">
+
+          <div class="welcome">
+            <div class="welcome-icon">✓</div>
+            <h2 id="employeeName">Welcome</h2>
+            <p id="employeeDate">Today</p>
+          </div>
+
+          <div class="status-card">
+            <div class="status-label">Today's Attendance</div>
+            <div class="status-value" id="attendanceStatus">Not Marked</div>
+            <div class="status-note" id="attendanceStatusNote">
+              Your attendance has not been marked today.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            id="markAttendanceButton"
+            class="primary-button"
+            style="margin-top: 18px;"
+          >
+            Mark Attendance
+          </button>
+
+          <div id="locationMessage" class="message" style="margin-top: 14px;"></div>
+
+          <div class="info-box">
+            Attendance can only be marked from the office.
+          </div>
+
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+
+  <script>
+
+    /*************************************************
+     * CONFIGURATION
+     *
+     * Paste your Apps Script Web App URL here.
+     * It looks like:
+     * https://script.google.com/macros/s/AKfycb.../exec
+     *************************************************/
+
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyQRcGQQHlzgWKBEms2-Ua-MNecNd4AkvdasiAfSnIM71qtAJ1hF_3e_mmDMXWZtfcwYQ/exec';
+
+
+    const DEVICE_TOKEN_KEY = 'attendance_device_token';
+    const DEVICE_TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 730; // 2 years
+    const DEVICE_TOKEN_DB_NAME = 'AttendanceTracker';
+    const DEVICE_TOKEN_DB_VERSION = 1;
+    const DEVICE_TOKEN_STORE_NAME = 'DeviceStore';
+
+    let currentDeviceToken = null;
+
+
+    /*************************************************
+     * API HELPER
+     *
+     * Replaces google.script.run. Calls the Apps Script
+     * web app and resolves with the function's result.
+     *
+     * Content-Type is text/plain on purpose: it avoids
+     * a CORS preflight request, which Apps Script
+     * cannot answer.
+     *************************************************/
+
+    function api(action, args) {
+
+      return fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, args: args || [] })
+      })
+        .catch(function() {
+          throw new Error(
+            'Unable to reach the server. Please check your internet connection and try again.'
+          );
+        })
+        .then(function(response) {
+
+          if (!response.ok) {
+            throw new Error('Server error (' + response.status + '). Please try again.');
+          }
+
+          return response.json();
+        })
+        .then(function(data) {
+
+          if (!data || !data.ok) {
+            throw new Error(
+              data && data.error
+                ? data.error
+                : 'Unexpected server response.'
+            );
+          }
+
+          return data.result;
+        });
+    }
+
+
+    /*************************************************
+     * ELEMENTS
+     *************************************************/
+
+    const registrationScreen = document.getElementById('registrationScreen');
+    const employeeScreen = document.getElementById('employeeScreen');
+    const registrationCodeInput = document.getElementById('registrationCode');
+    const registerButton = document.getElementById('registerButton');
+    const registrationMessage = document.getElementById('registrationMessage');
+    const employeeName = document.getElementById('employeeName');
+    const employeeDate = document.getElementById('employeeDate');
+    const attendanceStatus = document.getElementById('attendanceStatus');
+    const attendanceStatusNote = document.getElementById('attendanceStatusNote');
+    const markAttendanceButton = document.getElementById('markAttendanceButton');
+    const locationMessage = document.getElementById('locationMessage');
+    const installHint = document.getElementById('installHint');
+
+
+    /*************************************************
+     * IPHONE "ADD TO HOME SCREEN" HINT
+     *************************************************/
+
+    function setupInstallHint() {
+
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      const isStandalone =
+        window.navigator.standalone === true ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+
+      if (isIos && !isStandalone) {
+        installHint.style.display = 'block';
+      }
+    }
+
+
+    /*************************************************
+     * SCREEN CONTROL
+     *************************************************/
+
+    function showRegistrationScreen() {
+      registrationScreen.classList.add('active');
+      employeeScreen.classList.remove('active');
+    }
+
+    function formatLongDate(date) {
+      return date.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
+    function showEmployeeScreen(name) {
+
+      employeeName.textContent = 'Hello, ' + name;
+
+      employeeDate.textContent = formatLongDate(new Date());
+
+      attendanceStatus.textContent = 'Checking…';
+
+      attendanceStatusNote.textContent = 'Checking today\'s attendance.';
+
+      registrationScreen.classList.remove('active');
+
+      employeeScreen.classList.add('active');
+
+      const deviceToken = getDeviceTokenSync();
+
+      if (!deviceToken) {
+
+        showLocationMessage(
+          'This device could not be identified. Please reload the page.',
+          'error'
+        );
+
+        markAttendanceButton.disabled = false;
+        markAttendanceButton.textContent = 'Mark Attendance';
+
+        return;
+      }
+
+      api('getEmployeeAttendanceForToday', [deviceToken]).then(
+
+        function(result) {
+
+          if (!result || !result.success) {
+
+            attendanceStatus.textContent = 'Unable to load';
+
+            attendanceStatusNote.textContent =
+              result && result.reason
+                ? result.reason
+                : 'Unable to check today\'s attendance.';
+
+            return;
+          }
+
+          if (!result.registered) {
+
+            attendanceStatus.textContent = 'Device Not Registered';
+
+            attendanceStatusNote.textContent =
+              result.reason || 'Please contact an administrator.';
+
+            return;
+          }
+
+          // Use the server's authoritative date.
+          if (result.date) {
+
+            const parts = result.date.split('-');
+
+            if (parts.length === 3) {
+
+              employeeDate.textContent = formatLongDate(
+                new Date(
+                  Number(parts[0]),
+                  Number(parts[1]) - 1,
+                  Number(parts[2])
+                )
+              );
+            }
+          }
+
+          // Non-working day
+          if (!result.isWorkingDay) {
+
+            attendanceStatus.textContent = result.status || 'Holiday';
+
+            attendanceStatusNote.textContent =
+              result.holidayName
+                ? result.holidayName
+                : 'Attendance is not required today.';
+
+            markAttendanceButton.disabled = true;
+
+            return;
+          }
+
+          // Working day
+          attendanceStatus.textContent = result.status || 'Not Marked';
+
+          if (result.attendanceMarked) {
+
+            attendanceStatusNote.textContent =
+              result.checkInTime
+                ? 'Checked in at ' + result.checkInTime + '.'
+                : 'Attendance has been marked for today.';
+
+            markAttendanceButton.disabled = true;
+
+          } else {
+
+            attendanceStatusNote.textContent =
+              'Your attendance has not been marked today.';
+
+            markAttendanceButton.disabled = false;
+          }
+        },
+
+        function(error) {
+
+          console.error('Attendance lookup failed:', error);
+
+          attendanceStatus.textContent = 'Unable to load';
+
+          attendanceStatusNote.textContent =
+            error && error.message
+              ? error.message
+              : 'Unable to check today\'s attendance. Please try again.';
+        }
+      );
+    }
+
+
+    /*************************************************
+     * MESSAGES
+     *************************************************/
+
+    function showRegistrationMessage(message, type) {
+      registrationMessage.textContent = message;
+      registrationMessage.className = 'message ' + type;
+    }
+
+    function clearRegistrationMessage() {
+      registrationMessage.textContent = '';
+      registrationMessage.className = 'message';
+    }
+
+    function showLocationMessage(message, type) {
+      locationMessage.textContent = message;
+      locationMessage.className = 'message ' + type;
+    }
+
+
+    /*************************************************
+     * DEVICE TOKEN STORAGE
+     *
+     * Primary:   localStorage
+     * Fallbacks: cookie, IndexedDB
+     *
+     * The raw token never goes into Google Sheets.
+     * Code.gs hashes it before storage.
+     *************************************************/
+
+    function readLocalStorageToken() {
+
+      try {
+        const token = localStorage.getItem(DEVICE_TOKEN_KEY);
+        return token ? String(token).trim() : null;
+      } catch (error) {
+        console.warn('localStorage is unavailable:', error);
+        return null;
+      }
+    }
+
+    function writeLocalStorageToken(token) {
+
+      try {
+        localStorage.setItem(DEVICE_TOKEN_KEY, token);
+        return true;
+      } catch (error) {
+        console.warn('Unable to write device token to localStorage:', error);
+        return false;
+      }
+    }
+
+    function readCookieToken() {
+
+      try {
+
+        const prefix = encodeURIComponent(DEVICE_TOKEN_KEY) + '=';
+
+        const cookies = document.cookie ? document.cookie.split(';') : [];
+
+        for (let i = 0; i < cookies.length; i++) {
+
+          const cookie = cookies[i].trim();
+
+          if (cookie.indexOf(prefix) === 0) {
+
+            const value = cookie.substring(prefix.length);
+
+            return value ? decodeURIComponent(value).trim() : null;
+          }
+        }
+
+      } catch (error) {
+        console.warn('Unable to read device token cookie:', error);
+      }
+
+      return null;
+    }
+
+    function writeCookieToken(token) {
+
+      try {
+
+        document.cookie =
+          encodeURIComponent(DEVICE_TOKEN_KEY) +
+          '=' +
+          encodeURIComponent(token) +
+          '; Max-Age=' + DEVICE_TOKEN_COOKIE_MAX_AGE +
+          '; Path=/; SameSite=Lax; Secure';
+
+        return true;
+
+      } catch (error) {
+        console.warn('Unable to write device token cookie:', error);
+        return false;
+      }
+    }
+
+
+    /*************************************************
+     * INDEXEDDB
+     *************************************************/
+
+    function openDeviceTokenDatabase() {
+
+      return new Promise(function(resolve, reject) {
+
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB is not supported.'));
+          return;
+        }
+
+        const request = window.indexedDB.open(
+          DEVICE_TOKEN_DB_NAME,
+          DEVICE_TOKEN_DB_VERSION
+        );
+
+        request.onupgradeneeded = function(event) {
+
+          const db = event.target.result;
+
+          if (!db.objectStoreNames.contains(DEVICE_TOKEN_STORE_NAME)) {
+            db.createObjectStore(DEVICE_TOKEN_STORE_NAME);
+          }
+        };
+
+        request.onsuccess = function(event) {
+          resolve(event.target.result);
+        };
+
+        request.onerror = function() {
+          reject(request.error || new Error('Unable to open IndexedDB.'));
+        };
+      });
+    }
+
+    function readIndexedDbToken() {
+
+      return openDeviceTokenDatabase().then(function(db) {
+
+        return new Promise(function(resolve, reject) {
+
+          const transaction = db.transaction(DEVICE_TOKEN_STORE_NAME, 'readonly');
+
+          const request = transaction
+            .objectStore(DEVICE_TOKEN_STORE_NAME)
+            .get(DEVICE_TOKEN_KEY);
+
+          request.onsuccess = function() {
+            const token = request.result;
+            db.close();
+            resolve(token ? String(token).trim() : null);
+          };
+
+          request.onerror = function() {
+            db.close();
+            reject(request.error || new Error('Unable to read IndexedDB.'));
+          };
+        });
+      });
+    }
+
+    function writeIndexedDbToken(token) {
+
+      return openDeviceTokenDatabase().then(function(db) {
+
+        return new Promise(function(resolve, reject) {
+
+          const transaction = db.transaction(DEVICE_TOKEN_STORE_NAME, 'readwrite');
+
+          const request = transaction
+            .objectStore(DEVICE_TOKEN_STORE_NAME)
+            .put(token, DEVICE_TOKEN_KEY);
+
+          request.onsuccess = function() {
+            db.close();
+            resolve(true);
+          };
+
+          request.onerror = function() {
+            db.close();
+            reject(request.error || new Error('Unable to save IndexedDB token.'));
+          };
+        });
+      });
+    }
+
+
+    /*************************************************
+     * PERSISTENT STORAGE REQUEST
+     *
+     * Asks the browser not to evict this site's data.
+     * Safe to call; ignored where unsupported.
+     *************************************************/
+
+    function requestPersistentStorage() {
+
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          navigator.storage.persist().catch(function() {});
+        }
+      } catch (error) {
+        // Not supported; ignore.
+      }
+    }
+
+
+    /*************************************************
+     * TOKEN GENERATION
+     *************************************************/
+
+    function generateNewDeviceToken() {
+
+      if (
+        window.crypto &&
+        typeof window.crypto.randomUUID === 'function'
+      ) {
+
+        return window.crypto.randomUUID() + '-' + window.crypto.randomUUID();
+      }
+
+      return (
+        'DEV-' +
+        Date.now() +
+        '-' +
+        Math.random().toString(36).substring(2) +
+        '-' +
+        Math.random().toString(36).substring(2)
+      );
+    }
+
+
+    /*************************************************
+     * SAVE TOKEN TO ALL AVAILABLE STORES
+     *************************************************/
+
+    function persistDeviceToken(token) {
+
+      if (!token) {
+        return;
+      }
+
+      const normalizedToken = String(token).trim();
+
+      if (!normalizedToken) {
+        return;
+      }
+
+      writeLocalStorageToken(normalizedToken);
+
+      writeCookieToken(normalizedToken);
+
+      writeIndexedDbToken(normalizedToken).catch(function(error) {
+        console.warn('IndexedDB token save failed:', error);
+      });
+
+      requestPersistentStorage();
+    }
+
+
+    /*************************************************
+     * GET EXISTING TOKEN
+     *
+     * Does NOT generate a new token. It only searches
+     * existing storage and re-syncs the other stores.
+     *************************************************/
+
+    async function getStoredDeviceToken() {
+
+      // 1. localStorage
+      let token = readLocalStorageToken();
+
+      if (token) {
+
+        writeCookieToken(token);
+
+        writeIndexedDbToken(token).catch(function(error) {
+          console.warn('IndexedDB refresh failed:', error);
+        });
+
+        return token;
+      }
+
+      // 2. Cookie
+      token = readCookieToken();
+
+      if (token) {
+
+        writeLocalStorageToken(token);
+
+        writeIndexedDbToken(token).catch(function(error) {
+          console.warn('IndexedDB restore failed:', error);
+        });
+
+        return token;
+      }
+
+      // 3. IndexedDB
+      try {
+
+        token = await readIndexedDbToken();
+
+        if (token) {
+
+          writeLocalStorageToken(token);
+          writeCookieToken(token);
+
+          return token;
+        }
+
+      } catch (error) {
+        console.warn('IndexedDB token lookup failed:', error);
+      }
+
+      return null;
+    }
+
+
+    /*************************************************
+     * GET OR CREATE TOKEN (used at registration)
+     *************************************************/
+
+    async function getOrCreateDeviceToken() {
+
+      let token = await getStoredDeviceToken();
+
+      if (token) {
+        currentDeviceToken = token;
+        return token;
+      }
+
+      token = generateNewDeviceToken();
+
+      currentDeviceToken = token;
+
+      persistDeviceToken(token);
+
+      return token;
+    }
+
+
+    /*************************************************
+     * SYNCHRONOUS TOKEN ACCESS
+     *************************************************/
+
+    function getDeviceTokenSync() {
+
+      if (currentDeviceToken) {
+        return currentDeviceToken;
+      }
+
+      let token = readLocalStorageToken();
+
+      if (!token) {
+        token = readCookieToken();
+      }
+
+      if (token) {
+        currentDeviceToken = token;
+        return token;
+      }
+
+      return null;
+    }
+
+
+    /*************************************************
+     * MARK ATTENDANCE
+     *************************************************/
+
+    function requestEmployeeLocation() {
+
+      if (!navigator.geolocation) {
+
+        showLocationMessage(
+          'Location services are not supported by this browser.',
+          'error'
+        );
+
+        return;
+      }
+
+      showLocationMessage(
+        'Getting your location… Please allow location access if prompted.',
+        'success'
+      );
+
+      markAttendanceButton.disabled = true;
+      markAttendanceButton.textContent = 'Getting Location…';
+
+      navigator.geolocation.getCurrentPosition(
+
+        function(position) {
+
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          showLocationMessage(
+            'Location received. Verifying your office location…',
+            'success'
+          );
+
+          const deviceToken = getDeviceTokenSync();
+
+          api('markEmployeeAttendance', [deviceToken, latitude, longitude]).then(
+
+            function(result) {
+
+              markAttendanceButton.disabled = false;
+              markAttendanceButton.textContent = 'Mark Attendance';
+
+              if (!result || !result.success) {
+
+                // Already marked
+                if (result && result.alreadyMarked) {
+
+                  attendanceStatus.textContent = result.status || 'Present';
+
+                  attendanceStatusNote.textContent =
+                    'Attendance has already been marked today.';
+
+                  markAttendanceButton.disabled = true;
+
+                  showLocationMessage(
+                    'Attendance has already been marked today.',
+                    'success'
+                  );
+
+                  return;
+                }
+
+                // Location rejected
+                if (result && result.locationRejected) {
+
+                  showLocationMessage(
+                    result.reason ||
+                    'You are outside the permitted office radius.',
+                    'error'
+                  );
+
+                  return;
+                }
+
+                // Other server error
+                showLocationMessage(
+                  result && result.reason
+                    ? result.reason
+                    : 'Unable to mark attendance.',
+                  'error'
+                );
+
+                return;
+              }
+
+              // Success
+              attendanceStatus.textContent = result.status || 'Present';
+
+              attendanceStatusNote.textContent =
+                result.checkInTime
+                  ? 'Checked in at ' + result.checkInTime + '.'
+                  : 'Attendance has been marked for today.';
+
+              markAttendanceButton.disabled = true;
+
+              showLocationMessage(
+                'Attendance marked successfully. ' +
+                'You are approximately ' +
+                result.distanceMeters +
+                ' metres from the office.',
+                'success'
+              );
+            },
+
+            function(error) {
+
+              console.error('Attendance marking failed:', error);
+
+              markAttendanceButton.disabled = false;
+              markAttendanceButton.textContent = 'Mark Attendance';
+
+              showLocationMessage(
+                error && error.message
+                  ? error.message
+                  : 'Unable to mark attendance. Please try again.',
+                'error'
+              );
+            }
+          );
+        },
+
+        function(error) {
+
+          console.error('GPS error:', error);
+
+          let message = 'Unable to get your location.';
+
+          if (error.code === 1) {
+
+            message =
+              'Location permission was denied. Please allow location access and try again.';
+
+          } else if (error.code === 2) {
+
+            message =
+              'Your location could not be determined. Please check your device location services.';
+
+          } else if (error.code === 3) {
+
+            message = 'Location request timed out. Please try again.';
+          }
+
+          showLocationMessage(message, 'error');
+
+          markAttendanceButton.disabled = false;
+          markAttendanceButton.textContent = 'Mark Attendance';
+        },
+
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    markAttendanceButton.addEventListener('click', requestEmployeeLocation);
+
+
+    /*************************************************
+     * CHECK EXISTING DEVICE ON PAGE LOAD
+     *************************************************/
+
+    async function initializeEmployeePage() {
+
+      const deviceToken = await getStoredDeviceToken();
+
+      // No token anywhere: a new / unregistered browser.
+      if (!deviceToken) {
+
+        currentDeviceToken = null;
+
+        showRegistrationScreen();
+
+        return;
+      }
+
+      currentDeviceToken = deviceToken;
+
+      // Hide both screens while the server verifies the token.
+      registrationScreen.classList.remove('active');
+      employeeScreen.classList.remove('active');
+
+      api('getEmployeeForDeviceToken', [deviceToken]).then(
+
+        function(result) {
+
+          if (!result || !result.success) {
+
+            showRegistrationScreen();
+
+            showRegistrationMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to verify this device.',
+              'error'
+            );
+
+            return;
+          }
+
+          if (result.registered) {
+
+            showEmployeeScreen(result.employeeName);
+
+            return;
+          }
+
+          // Do NOT delete the browser token here. A failed
+          // verification does not automatically mean the
+          // token is bad.
+          showRegistrationScreen();
+
+          showRegistrationMessage(
+            result.reason ||
+            'This device is not currently registered. Please contact an administrator.',
+            'error'
+          );
+        },
+
+        function(error) {
+
+          console.error('Device verification failed:', error);
+
+          // Do not delete the token when the request itself fails.
+          showRegistrationScreen();
+
+          showRegistrationMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to verify this device. Please try again.',
+            'error'
+          );
+        }
+      );
+    }
+
+
+    /*************************************************
+     * REGISTRATION
+     *************************************************/
+
+    registerButton.addEventListener('click', async function() {
+
+      clearRegistrationMessage();
+
+      const code = registrationCodeInput.value.trim().toUpperCase();
+
+      if (!code) {
+
+        showRegistrationMessage('Please enter your registration code.', 'error');
+
+        registrationCodeInput.focus();
+
+        return;
+      }
+
+      if (!/^[A-Z0-9]{4}-[0-9]{4}$/.test(code)) {
+
+        showRegistrationMessage(
+          'Please enter the registration code in the format ABCD-1234.',
+          'error'
+        );
+
+        registrationCodeInput.focus();
+
+        return;
+      }
+
+      const deviceToken = await getOrCreateDeviceToken();
+
+      registerButton.disabled = true;
+      registerButton.textContent = 'Registering…';
+
+      api('registerDevice', [code, deviceToken]).then(
+
+        function(result) {
+
+          registerButton.disabled = false;
+          registerButton.textContent = 'Register This Device';
+
+          if (!result || !result.success) {
+
+            showRegistrationMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to register this device.',
+              'error'
+            );
+
+            return;
+          }
+
+          showEmployeeScreen(result.employeeName);
+        },
+
+        function(error) {
+
+          registerButton.disabled = false;
+          registerButton.textContent = 'Register This Device';
+
+          showRegistrationMessage(
+            error && error.message
+              ? error.message
+              : 'An unexpected error occurred while registering this device.',
+            'error'
+          );
+        }
+      );
+    });
+
+
+    /*************************************************
+     * REGISTRATION CODE FORMATTING
+     *************************************************/
+
+    registrationCodeInput.addEventListener('input', function() {
+
+      let value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+      if (value.length > 4) {
+        value = value.substring(0, 4) + '-' + value.substring(4, 8);
+      }
+
+      this.value = value;
+    });
+
+    registrationCodeInput.addEventListener('keydown', function(event) {
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        registerButton.click();
+      }
+    });
+
+
+    /*************************************************
+     * START
+     *************************************************/
+
+    setupInstallHint();
+
+    initializeEmployeePage();
+
+  </script>
+
+</body>
+</html>
