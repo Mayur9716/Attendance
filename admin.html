@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Attendance Tracker — Admin Panel</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #f8f8ff;
+      font-family: Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    iframe {
+      display: block;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      border: 0;
+    }
+
+    #setupMessage {
+      display: none;
+      padding: 40px 24px;
+      max-width: 560px;
+      margin: 0 auto;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    #setupMessage code {
+      background: #eef0ff;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <iframe id="adminFrame" title="Attendance Tracker — Admin Panel"></iframe>
+
+  <div id="setupMessage">
+    <h2>One more step</h2>
+    <p>
+      Open <code>admin.html</code> in a text editor and replace
+      <code>PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE</code> with your
+      Apps Script web app URL (the one ending in <code>/exec</code>).
+    </p>
+  </div>
+
+  <script>
+
+    /*************************************************
+     * Paste your Apps Script Web App URL here
+     * (the same one used in index.html).
+     *************************************************/
+
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQRcGQQHlzgWKBEms2-Ua-MNecNd4AkvdasiAfSnIM71qtAJ1hF_3e_mmDMXWZtfcwYQ/exec';
+
+    const frame = document.getElementById('adminFrame');
+    const setupMessage = document.getElementById('setupMessage');
+
+    if (/^https:\/\/script\.google\.com\/.+\/exec$/.test(APPS_SCRIPT_URL)) {
+
+      frame.src = APPS_SCRIPT_URL + '?page=admin';
+
+    } else {
+
+      frame.style.display = 'none';
+      setupMessage.style.display = 'block';
+
+    }
+
+  </script>
+
+</body>
+</html>
