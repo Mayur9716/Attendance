@@ -1,80 +1,5839 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
+  <base target="_top">
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <script>
+    /* Lets this page run on GitHub Pages: google.script.run calls are sent
+       to the Cloudflare Worker instead of Apps Script. Nothing else changes. */
+    (function () {
+      if (window.google && window.google.script) { return; }
+
+      var API_URL = 'https://attendance-test.mayurkumar971696.workers.dev/';
+
+      function runner(onOk, onFail, userObject) {
+        return new Proxy({}, {
+          get: function (target, name) {
+            if (name === 'then' || typeof name !== 'string') { return undefined; }
+            if (name === 'withSuccessHandler') { return function (fn) { return runner(fn, onFail, userObject); }; }
+            if (name === 'withFailureHandler') { return function (fn) { return runner(onOk, fn, userObject); }; }
+            if (name === 'withUserObject')     { return function (o) { return runner(onOk, onFail, o); }; }
+
+            return function () {
+              var args = Array.prototype.slice.call(arguments);
+              var fail = function (message) {
+                var error = new Error(message);
+                if (onFail) { onFail(error, userObject); } else { console.error(message); }
+              };
+
+              if (API_URL.indexOf('http') !== 0) {
+                fail('The server address is not set yet. Edit API_URL at the top of admin.html.');
+                return;
+              }
+
+              fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: name, args: args })
+              })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                  if (data && data.ok) { if (onOk) { onOk(data.result, userObject); } }
+                  else { fail((data && data.error) || 'Unexpected server error.'); }
+                })
+                .catch(function () { fail('Could not reach the server. Check your internet connection and try again.'); });
+            };
+          }
+        });
+      }
+
+      window.google = { script: { run: runner(null, null, undefined) } };
+    })();
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <title>Attendance Tracker — Admin Panel</title>
 
   <style>
-    html, body {
+    :root {
+      --bg: #f5f6fa;
+      --surface: #ffffff;
+      --border: #e6e8ef;
+      --border-soft: #eef0f5;
+      --text: #111827;
+      --text-2: #4b5563;
+      --muted: #8a91a3;
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --primary-soft: #eef2ff;
+      --ring: 0 0 0 4px rgba(79, 70, 229, 0.14);
+      --radius: 16px;
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+      --shadow-md: 0 10px 28px rgba(16, 24, 40, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
       margin: 0;
-      height: 100%;
-      background: #f8f8ff;
-      font-family: Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
     }
 
-    iframe {
-      display: block;
+    button, input, select, textarea { font-family: inherit; }
+
+    /* ==============================
+       LOGIN SCREEN
+       ============================== */
+
+    #loginScreen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.18) 0, transparent 38%),
+        radial-gradient(circle at 90% 92%, rgba(16, 185, 129, 0.14) 0, transparent 38%),
+        var(--bg);
+    }
+
+    .login-card {
       width: 100%;
-      height: 100vh;
-      height: 100dvh;
-      border: 0;
+      max-width: 424px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px 36px 32px;
+      box-shadow: 0 24px 60px rgba(16, 24, 40, 0.12);
     }
 
-    #setupMessage {
-      display: none;
-      padding: 40px 24px;
-      max-width: 560px;
-      margin: 0 auto;
-      color: #475569;
-      line-height: 1.6;
+    .brand { text-align: center; margin-bottom: 30px; }
+
+    .brand-mark {
+      width: 60px; height: 60px; margin: 0 auto 18px; border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #6366f1, #4338ca);
+      color: #fff; font-size: 22px; font-weight: 700; letter-spacing: 0.02em;
+      box-shadow: 0 10px 24px rgba(79, 70, 229, 0.35);
     }
 
-    #setupMessage code {
-      background: #eef0ff;
-      padding: 2px 6px;
-      border-radius: 6px;
+    .brand h1 { margin: 0; font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; color: var(--text); }
+    .brand p { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+
+    .field { margin-bottom: 18px; }
+    .field label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; color: #344054; }
+
+    .field input, .field select {
+      width: 100%; height: 48px; border: 1px solid #d5d9e3; border-radius: 12px;
+      padding: 0 14px; outline: none; background: #fff; color: var(--text); font-size: 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
+
+    .field select {
+      cursor: pointer; appearance: none; -webkit-appearance: none; padding-right: 42px;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #667085 50%),
+        linear-gradient(135deg, #667085 50%, transparent 50%);
+      background-position: calc(100% - 20px) 21px, calc(100% - 14px) 21px;
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+    }
+
+    .field input:focus, .field select:focus { border-color: var(--primary); box-shadow: var(--ring); }
+
+    #adminPin { letter-spacing: 6px; font-size: 18px; }
+
+    .login-button {
+      width: 100%; height: 48px; margin-top: 6px; border: none; border-radius: 12px;
+      background: linear-gradient(180deg, #5b52f0, #4f46e5); color: #fff;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.30);
+      transition: transform 0.08s, box-shadow 0.15s, filter 0.15s;
+    }
+
+    .login-button:hover { filter: brightness(1.06); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.38); }
+    .login-button:active { transform: translateY(1px); }
+    .login-button:disabled { background: #a5aac8; box-shadow: none; cursor: not-allowed; }
+
+    #loginError {
+      display: none; margin-bottom: 16px; padding: 11px 13px; border-radius: 10px;
+      background: #fff1f0; border: 1px solid #f9c9c6; color: #b42318; font-size: 13px; line-height: 1.4;
+    }
+
+    .login-footer { margin-top: 24px; text-align: center; color: #a3a9b8; font-size: 12px; }
+
+    /* ==============================
+       ADMIN APP: TOP BAR
+       ============================== */
+
+    #adminApp { display: none; min-height: 100vh; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 20; height: 66px; padding: 0 32px;
+      background: rgba(255, 255, 255, 0.86);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+
+    .topbar-logo {
+      width: 38px; height: 38px; border-radius: 11px;
+      background: linear-gradient(135deg, #6366f1, #4338ca); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .topbar-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+
+    .admin-info { display: flex; align-items: center; gap: 14px; }
+    .admin-details { text-align: right; }
+    .admin-name { font-size: 13px; font-weight: 600; }
+    .admin-role { margin-top: 2px; font-size: 11px; color: var(--muted); }
+
+    .logout-button {
+      height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px;
+      background: #fff; color: #344054; cursor: pointer; font-size: 12px; font-weight: 600;
+      box-shadow: var(--shadow-sm); transition: background 0.15s, border-color 0.15s;
+    }
+
+    .logout-button:hover { background: #f8f9fc; border-color: #d5d9e3; }
+
+    /* ==============================
+       TAB BAR
+       ============================== */
+
+    .tabbar {
+      position: sticky; top: 66px; z-index: 15;
+      background: rgba(255, 255, 255, 0.94);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      backdrop-filter: saturate(180%) blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tabbar-inner {
+      max-width: none; margin: 0; padding: 10px 32px;
+      display: flex; justify-content: flex-start; gap: 6px; overflow-x: auto; scrollbar-width: none;
+    }
+
+    .tabbar-inner::-webkit-scrollbar { display: none; }
+
+    .tab-button {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px;
+      height: 38px; padding: 0 14px; border: 1px solid transparent; border-radius: 10px;
+      background: transparent; color: var(--text-2); font-size: 13px; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .tab-button svg {
+      width: 16px; height: 16px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .tab-button:hover { background: #f3f4f9; color: var(--text); }
+    .tab-button.active { background: var(--primary-soft); color: var(--primary-dark); border-color: #c7cdfb; }
+    .tab-button:focus-visible { outline: none; box-shadow: var(--ring); }
+
+    .tab-badge {
+      display: none; align-items: center; justify-content: center;
+      min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px;
+      background: #f4b73d; color: #4a3300; font-size: 10px; font-weight: 700;
+    }
+
+    /* ==============================
+       CONTENT + PANELS
+       ============================== */
+
+    .content { padding: 28px 32px 48px; max-width: 1240px; margin: 0 auto; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: panelIn 0.18s ease; }
+
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tab-panel > .dashboard-section:first-child { margin-top: 0; }
+
+    .dashboard-header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 20px; margin-bottom: 22px;
+    }
+
+    .dashboard-header-text h2 { margin: 0; font-size: 28px; letter-spacing: -0.025em; }
+    .dashboard-header-text p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+    /* ==============================
+       STAT CARDS
+       ============================== */
+
+    .dashboard-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px; margin-bottom: 8px;
+    }
+
+    .stat-card {
+      --c: #4f46e5; --c-soft: #eef2ff;
+      position: relative; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow-sm);
+      overflow: hidden; transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .stat-icon {
+      position: absolute; top: 16px; right: 16px; width: 38px; height: 38px; border-radius: 11px;
+      background: var(--c-soft); color: var(--c);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .stat-icon svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .stat-label { padding-right: 46px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+    .stat-value { margin-top: 14px; font-size: 32px; line-height: 1; font-weight: 700; letter-spacing: -0.03em; color: var(--text); }
+    .stat-note { margin-top: 10px; color: #a3a9b8; font-size: 12px; }
+
+    .stat-card.present-card { --c: #16a34a; --c-soft: #dcfce7; }
+    .stat-card.absent-card { --c: #dc2626; --c-soft: #fee2e2; }
+    .stat-card.wfh-card { --c: #2563eb; --c-soft: #dbeafe; }
+    .stat-card.sick-card { --c: #d97706; --c-soft: #fef3c7; }
+    .stat-card.leave-card { --c: #7c3aed; --c-soft: #ede9fe; }
+    .stat-card.halfday-card { --c: #0891b2; --c-soft: #cffafe; }
+    .stat-card.device-card { --c: #475569; --c-soft: #e2e8f0; }
+
+    /* ==============================
+       SECTION CARDS
+       ============================== */
+
+    .dashboard-section {
+      margin-top: 24px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; box-shadow: var(--shadow-sm); overflow: hidden;
+    }
+
+    .section-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border-soft);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+
+    .section-title h3 { margin: 0; font-size: 17px; letter-spacing: -0.015em; color: var(--text); }
+    .section-title p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+    .not-marked-badge {
+      display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px;
+      background: #fff7e6; border: 1px solid #fde7b0; color: #9a6700; font-size: 12px; font-weight: 600;
+    }
+
+    .glance-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .link-button {
+      height: 34px; padding: 0 14px; border: 1px solid #c7cdfb; border-radius: 10px;
+      background: var(--primary-soft); color: var(--primary-dark);
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .link-button:hover { background: #e0e7ff; }
+
+    /* ==============================
+       TOOLBAR (date / month / buttons)
+       ============================== */
+
+    .toolbar { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; }
+
+    .monthly-control { display: flex; flex-direction: column; gap: 5px; }
+
+    .monthly-control label {
+      color: var(--muted); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+
+    .monthly-control input, .monthly-control select {
+      height: 38px; min-width: 150px; padding: 0 10px; border: 1px solid #d5d9e3;
+      border-radius: 10px; background: #fff; color: var(--text); font-size: 12px; outline: none;
+    }
+
+    .monthly-control select { cursor: pointer; min-width: 170px; font-weight: 600; }
+
+    .monthly-control input:focus, .monthly-control select:focus { border-color: var(--primary); box-shadow: var(--ring); }
+
+    .segmented {
+      display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px;
+      background: #f1f2f7; border: 1px solid var(--border);
+    }
+
+    .seg-button {
+      height: 32px; padding: 0 14px; border: none; border-radius: 9px; background: transparent;
+      color: var(--text-2); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      display: inline-flex; align-items: center; transition: background 0.15s, color 0.15s;
+    }
+
+    .seg-button:hover { color: var(--text); }
+    .seg-button.is-active { background: #fff; color: var(--primary-dark); box-shadow: var(--shadow-sm); }
+    .seg-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #unmarkedCount {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 22px; height: 20px; margin-left: 8px; padding: 0 7px; border-radius: 999px;
+      background: #f4b73d; color: #4a3300; font-size: 11px; font-weight: 700;
+    }
+
+    .refresh-attendance-button {
+      height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px;
+      background: #fff; color: #344054; font-size: 12px; font-weight: 600; cursor: pointer;
+      white-space: nowrap; box-shadow: var(--shadow-sm); transition: background 0.15s;
+    }
+
+    .refresh-attendance-button:hover { background: #f8f9fc; }
+    .refresh-attendance-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ==============================
+       TABLES
+       ============================== */
+
+    .table-wrapper { width: 100%; max-height: 600px; overflow: auto; position: relative; }
+
+    .attendance-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 850px; }
+
+    .attendance-table th {
+      position: sticky; top: 0; z-index: 5; padding: 13px 16px; background: #f9fafc;
+      border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase; text-align: center; white-space: nowrap;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .attendance-table th:first-child, .attendance-table td:first-child { text-align: left; padding-left: 24px; }
+
+    .attendance-table td {
+      padding: 14px 16px; border-bottom: 1px solid var(--border-soft); color: var(--text-2);
+      font-size: 13px; text-align: center; white-space: nowrap; background: #fff;
+    }
+
+    .attendance-table tbody tr:hover td { background: #fafbff; }
+    .attendance-table tbody tr:last-child td { border-bottom: none; }
+
+    .note-cell { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+
+    .emp { display: flex; align-items: center; gap: 12px; }
+
+    .avatar {
+      flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+      background: var(--primary-soft); color: var(--primary);
+      display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    }
+
+    .employee-cell {
+      font-weight: 600; color: var(--text); font-size: 13px; white-space: normal;
+      overflow-wrap: anywhere; line-height: 1.35;
+    }
+
+    .employee-id { margin-top: 2px; color: #a3a9b8; font-size: 11px; font-weight: 400; }
+
+    .attendance-percentage { font-weight: 700; }
+
+    .pct-pill {
+      display: inline-block; min-width: 58px; padding: 5px 11px; border-radius: 999px;
+      background: #f2f4f7; color: #667085; font-size: 12px; font-weight: 700;
+    }
+
+    .attendance-good .pct-pill { background: #dcfce7; color: #15803d; }
+    .attendance-medium .pct-pill { background: #fef3c7; color: #b45309; }
+    .attendance-low .pct-pill { background: #fee2e2; color: #b42318; }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+      background: #f2f4f7; color: #667085; font-size: 11px; font-weight: 700;
+    }
+
+    .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    .status-present { background: #dcfce7; color: #15803d; }
+    .status-wfh { background: #dbeafe; color: #1d4ed8; }
+    .status-sickleave { background: #fef3c7; color: #b45309; }
+    .status-leave { background: #ede9fe; color: #6d28d9; }
+    .status-halfday { background: #cffafe; color: #0e7490; }
+    .status-absent { background: #fee2e2; color: #b42318; }
+    .status-notmarked { background: #fff4e5; color: #9a6700; }
+    .status-holiday { background: #e2e8f0; color: #475569; }
+
+    .unmarked-status-select {
+      height: 36px; min-width: 150px; padding: 0 28px 0 10px; border: 1px solid #c7cdfb;
+      border-radius: 9px; background: #fff; color: var(--text); font-size: 12px; font-weight: 600;
+      cursor: pointer; outline: none;
+    }
+
+    .unmarked-status-select:hover { border-color: var(--primary); }
+    .unmarked-status-select:focus { border-color: var(--primary); box-shadow: var(--ring); }
+    .unmarked-status-select:disabled { opacity: 0.65; cursor: wait; }
+
+    /* ==============================
+       LOADING / MESSAGES / EMPTY
+       ============================== */
+
+    .dashboard-loading { padding: 44px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    .dashboard-spinner {
+      width: 26px; height: 26px; margin: 0 auto 12px; border: 3px solid #e6e8ef;
+      border-top-color: var(--primary); border-radius: 50%; animation: dashboardSpin 0.8s linear infinite;
+    }
+
+    @keyframes dashboardSpin { to { transform: rotate(360deg); } }
+
+    .dashboard-error {
+      margin-bottom: 20px; padding: 14px 16px; border: 1px solid #f9c9c6; border-radius: 12px;
+      background: #fff5f4; color: #b42318; font-size: 13px; line-height: 1.5; display: none;
+    }
+
+    .dashboard-empty { padding: 44px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    .notice {
+      margin: 16px 24px 0; padding: 11px 14px; border-radius: 10px;
+      background: #f1f5ff; border: 1px solid #c7d7fe; color: #3538cd; font-size: 13px; line-height: 1.45;
+    }
+
+    .inline-message {
+      display: none; margin: 16px 24px 0; padding: 12px 14px; border-radius: 10px;
+      font-size: 13px; line-height: 1.45;
+    }
+
+    .inline-message.success { display: block; background: #ecfdf3; border: 1px solid #b6efcd; color: #067647; }
+    .inline-message.error { display: block; background: #fff5f4; border: 1px solid #f9c9c6; color: #b42318; }
+
+    .empty-state { padding: 64px 24px; text-align: center; }
+
+    .empty-icon {
+      width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 16px;
+      background: var(--primary-soft); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .empty-icon svg {
+      width: 26px; height: 26px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .empty-state h4 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
+    .empty-state p { margin: 0; color: var(--muted); font-size: 13px; }
+
+    /* ==============================
+       ATTENDANCE MANAGEMENT
+       ============================== */
+
+    .attendance-management { padding: 24px; }
+
+    .attendance-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 22px; }
+
+    .attendance-field { display: flex; flex-direction: column; }
+    .attendance-field.full-width { grid-column: 1 / -1; }
+
+    .attendance-field label { margin-bottom: 7px; color: #344054; font-size: 12px; font-weight: 600; }
+
+    .attendance-field input, .attendance-field select, .attendance-field textarea {
+      width: 100%; border: 1px solid #d5d9e3; border-radius: 10px; background: #fff;
+      color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .attendance-field input, .attendance-field select { height: 44px; padding: 0 12px; }
+    .attendance-field textarea { min-height: 92px; padding: 11px 12px; resize: vertical; }
+
+    .attendance-field input:focus, .attendance-field select:focus, .attendance-field textarea:focus {
+      border-color: var(--primary); box-shadow: var(--ring);
+    }
+
+    .attendance-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+
+    .attendance-save-button, .registration-generate-button {
+      height: 44px; padding: 0 22px; border: none; border-radius: 10px;
+      background: linear-gradient(180deg, #5b52f0, #4f46e5); color: #fff;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.28); transition: filter 0.15s, transform 0.08s;
+    }
+
+    .attendance-save-button:hover, .registration-generate-button:hover { filter: brightness(1.07); }
+    .attendance-save-button:active, .registration-generate-button:active { transform: translateY(1px); }
+    .attendance-save-button:disabled, .registration-generate-button:disabled { background: #a5aac8; box-shadow: none; cursor: not-allowed; }
+
+    .attendance-message {
+      display: none; margin: 0 24px 24px; padding: 12px 14px; border-radius: 10px;
+      font-size: 13px; line-height: 1.45;
+    }
+
+    .attendance-message.success { display: block; background: #ecfdf3; border: 1px solid #b6efcd; color: #067647; }
+    .attendance-message.error { display: block; background: #fff5f4; border: 1px solid #f9c9c6; color: #b42318; }
+
+    /* ==============================
+       DEVICE REGISTRATION
+       ============================== */
+
+    .device-registration { padding: 24px; }
+
+    .device-registration-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 18px; }
+
+    .device-registration-field { display: flex; flex-direction: column; }
+    .device-registration-field label { margin-bottom: 7px; color: #344054; font-size: 12px; font-weight: 600; }
+
+    .device-registration-field select {
+      width: 100%; height: 44px; padding: 0 12px; border: 1px solid #d5d9e3; border-radius: 10px;
+      background: #fff; color: var(--text); font-size: 13px; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .device-registration-field select:focus { border-color: var(--primary); box-shadow: var(--ring); }
+    .device-registration-field select:disabled { background: #f8f9fc; color: #98a2b3; cursor: wait; }
+
+    .registration-code-result {
+      margin-top: 20px; padding: 22px; border-radius: 14px; border: 1px solid #dfe3f0;
+      background: linear-gradient(180deg, #fafbff 0%, #f7f8fc 100%); text-align: center;
+    }
+
+    .registration-code-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted); margin-bottom: 9px;
+    }
+
+    .registration-code-value {
+      font-size: 32px; line-height: 1.2; font-weight: 800; letter-spacing: 0.14em;
+      color: var(--text); font-family: monospace; margin-bottom: 8px;
+    }
+
+    .registration-code-expiry { font-size: 13px; color: #667085; margin-bottom: 14px; }
+    .registration-code-note { font-size: 12px; line-height: 1.5; color: #667085; max-width: 560px; margin: 0 auto; }
+
+    .registration-message { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; font-size: 13px; line-height: 1.45; }
+    .registration-message.success { display: block; background: #ecfdf3; border: 1px solid #b6efcd; color: #067647; }
+    .registration-message.error { display: block; background: #fff5f4; border: 1px solid #f9c9c6; color: #b42318; }
+
+    /* ==============================
+       EXPORT / DANGER / HOLIDAY EXTRAS
+       ============================== */
+
+    .export-button {
+      height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid #b6efcd; border-radius: 10px; background: #ecfdf3; color: #067647;
+      font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s;
+    }
+
+    .export-button:hover { background: #d1fadf; }
+    .export-button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .export-button svg {
+      width: 15px; height: 15px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .danger-button {
+      height: 44px; padding: 0 22px; border: none; border-radius: 10px;
+      background: linear-gradient(180deg, #ef4444, #dc2626); color: #fff;
+      font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25); transition: filter 0.15s, transform 0.08s;
+    }
+
+    .danger-button:hover { filter: brightness(1.07); }
+    .danger-button:active { transform: translateY(1px); }
+    .danger-button:disabled { background: #dcaaa6; box-shadow: none; cursor: not-allowed; }
+    .danger-button.is-armed { background: linear-gradient(180deg, #b42318, #912018); }
+
+    .registration-generate-button.is-secondary {
+      background: #fff; color: var(--primary-dark); border: 1px solid #c7cdfb; box-shadow: none;
+    }
+
+    .registration-generate-button.is-secondary:hover { background: var(--primary-soft); filter: none; }
+    .registration-generate-button.is-secondary:disabled { background: #f3f4f9; color: #a3a9b8; border-color: var(--border); }
+
+    .holiday-status {
+      padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border);
+      background: #f8f9fc; color: var(--text-2); font-size: 13px; line-height: 1.5;
+    }
+
+    .holiday-status strong { display: block; color: var(--text); font-size: 14px; margin-bottom: 2px; }
+    .holiday-status.is-holiday { background: #fff5f4; border-color: #f9c9c6; }
+    .holiday-status.is-working { background: #ecfdf3; border-color: #b6efcd; }
+    .holiday-status .warn { margin-top: 8px; color: #9a6700; font-weight: 600; }
+
+    .type-pill {
+      display: inline-block; padding: 4px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; background: #f2f4f7; color: #667085;
+    }
+
+    .type-pill.holiday { background: #fee2e2; color: #b42318; }
+    .type-pill.working { background: #dcfce7; color: #15803d; }
+
+    .table-link {
+      height: 30px; padding: 0 12px; border: 1px solid #c7cdfb; border-radius: 8px;
+      background: var(--primary-soft); color: var(--primary-dark);
+      font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+
+    .table-link:hover { background: #e0e7ff; }
+
+    .info-note {
+      padding: 12px 14px; border-radius: 10px; background: #f8f9fc; border: 1px solid var(--border);
+      color: var(--text-2); font-size: 12px; line-height: 1.55;
+    }
+
+    .stack-gap { margin-top: 18px; }
+
+    @media (max-width: 800px) {
+      .danger-button { width: 100%; }
+      .toolbar .export-button { flex: 1 1 auto; justify-content: center; }
+    }
+
+    /* ==============================
+       RESPONSIVE
+       ============================== */
+
+    @media (max-width: 800px) {
+      .topbar { padding: 0 16px; }
+      .tabbar-inner { padding: 8px 16px; }
+      .content { padding: 20px 16px 40px; }
+      .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+      .dashboard-header { align-items: flex-start; flex-direction: column; }
+      .section-header { align-items: flex-start; flex-direction: column; }
+      .toolbar { width: 100%; }
+      .attendance-form { grid-template-columns: 1fr; }
+      .attendance-field.full-width { grid-column: auto; }
+      .attendance-actions { justify-content: stretch; }
+      .attendance-save-button { width: 100%; }
+      .device-registration-form { grid-template-columns: 1fr; }
+      .registration-generate-button { width: 100%; }
+      .admin-details { display: none; }
+      .notice, .inline-message { margin-left: 16px; margin-right: 16px; }
+    }
+
+    @media (max-width: 520px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .registration-code-value { font-size: 26px; letter-spacing: 0.10em; }
+    }
+   
+    /* =====================================================================
+       PASTEL THEME — soft indigo palette, rounded cards (no behaviour changes)
+       ===================================================================== */
+
+    /* ==============================
+       LOGIN — split card on a pastel backdrop
+       ============================== */
+
+    #loginScreen {
+      position: relative;
+      overflow: hidden;
+      padding: 32px;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(160deg, #f3f2ff 0%, #eef2ff 48%, #f6f3ff 100%);
+    }
+
+    .login-decor { position: absolute; border-radius: 50%; pointer-events: none; }
+
+    .decor-1 { width: 540px; height: 540px; left: -180px; top: -250px; background: radial-gradient(circle at 40% 40%, rgba(167, 139, 250, 0.55), rgba(167, 139, 250, 0.06) 72%); }
+    .decor-2 { width: 440px; height: 440px; left: -130px; bottom: -210px; background: radial-gradient(circle, rgba(129, 140, 248, 0.40), rgba(129, 140, 248, 0.04) 74%); }
+    .decor-3 { width: 400px; height: 400px; right: -130px; top: 8%; background: radial-gradient(circle, rgba(96, 165, 250, 0.38), rgba(96, 165, 250, 0.04) 74%); }
+    .decor-4 { width: 600px; height: 600px; right: -210px; bottom: -300px; background: radial-gradient(circle, rgba(167, 139, 250, 0.45), rgba(167, 139, 250, 0.05) 74%); }
+    .decor-5 { width: 600px; height: 600px; left: -290px; top: -330px; border: 1.5px dashed rgba(129, 140, 248, 0.45); }
+    .decor-6 { width: 560px; height: 560px; right: -320px; top: -170px; border: 1.5px dashed rgba(129, 140, 248, 0.40); }
+
+    .login-shell {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      width: 100%;
+      max-width: 980px;
+      min-height: 620px;
+      border-radius: 30px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 40px 90px -34px rgba(67, 56, 202, 0.45), 0 12px 32px rgba(16, 24, 40, 0.07);
+    }
+
+    .login-hero {
+      position: relative;
+      flex: 0 0 42%;
+      display: flex;
+      align-items: center;
+      padding: 56px 48px;
+      color: #fff;
+      overflow: hidden;
+      background: linear-gradient(150deg, #2e2a8c 0%, #3f3fc6 52%, #5b76f5 100%);
+    }
+
+    .hero-wave { position: absolute; border-radius: 50%; pointer-events: none; }
+    .hero-wave-1 { width: 135%; height: 70%; left: -18%; bottom: -40%; background: rgba(79, 70, 229, 0.55); }
+    .hero-wave-2 { width: 110%; height: 60%; right: -48%; bottom: -32%; background: rgba(96, 165, 250, 0.40); }
+    .hero-wave-3 { width: 85%; height: 58%; right: -38%; top: -32%; background: radial-gradient(circle at 30% 70%, rgba(130, 175, 255, 0.8), rgba(99, 102, 241, 0) 70%); }
+
+    .hero-content { position: relative; z-index: 1; }
+
+    .hero-eyebrow { margin-bottom: 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.3em; color: rgba(255, 255, 255, 0.7); }
+
+    .hero-content h2 { margin: 0; font-size: 44px; line-height: 1.12; letter-spacing: -0.02em; }
+
+    .hero-rule { width: 58px; height: 4px; margin: 22px 0; border-radius: 4px; background: #a5b4fc; }
+
+    .hero-content p { margin: 0; max-width: 290px; font-size: 16px; line-height: 1.6; color: rgba(255, 255, 255, 0.8); }
+
+    .login-card {
+      flex: 1;
+      max-width: none;
+      width: auto;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 44px 52px 34px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: #fff;
+    }
+
+    .brand { margin-bottom: 26px; }
+
+    .brand-mark {
+      width: 76px; height: 76px; margin-bottom: 16px; border-radius: 22px; font-size: 26px;
+      background: linear-gradient(145deg, #6366f1, #4338ca);
+      box-shadow: 0 16px 30px -10px rgba(79, 70, 229, 0.65);
+    }
+
+    .brand h1 { font-size: 28px; color: #0f172a; -webkit-text-fill-color: #0f172a; background: none; }
+    .brand p { font-size: 15px; }
+
+    .field label { font-size: 14px; color: #1e293b; }
+
+    .field input, .field select {
+      height: 54px; border-radius: 14px; border: 1px solid #d9dcf8; background-color: #f8f8ff; font-size: 15px;
+    }
+
+    .field select { background-position: calc(100% - 22px) 23px, calc(100% - 16px) 23px; }
+
+    .field input:focus, .field select:focus { background-color: #fff; border-color: #6366f1; }
+
+    .input-wrap { position: relative; }
+    .input-wrap input { padding-right: 54px; }
+
+    .pin-toggle {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 38px; height: 38px; border: none; border-radius: 10px; background: transparent;
+      color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+
+    .pin-toggle:hover { background: #eef0ff; color: #4338ca; }
+
+    .pin-toggle svg {
+      width: 20px; height: 20px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .pin-toggle .icon-eye { display: none; }
+    .pin-toggle.is-visible .icon-eye { display: block; }
+    .pin-toggle.is-visible .icon-eye-off { display: none; }
+
+    .login-button {
+      height: 56px; margin-top: 8px; border-radius: 14px; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #5b52f0, #4338ca);
+      box-shadow: 0 16px 28px -12px rgba(67, 56, 202, 0.7);
+    }
+
+    .login-button::after {
+      content: ''; width: 20px; height: 20px; margin-left: 10px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3Cpolyline points='12 5 19 12 12 19'/%3E%3C/svg%3E") no-repeat center / contain;
+    }
+
+    .login-button:hover { box-shadow: 0 18px 30px -12px rgba(67, 56, 202, 0.8); }
+    .login-button:disabled { background: #a5aac8; box-shadow: none; }
+
+    .login-footer { margin-top: 22px; font-size: 13px; color: #94a3b8; }
+
+    /* ==============================
+       APP BACKGROUND, TOP BAR, TAB BAR
+       ============================== */
+
+    #adminApp { background: linear-gradient(180deg, #f8f8ff 0%, #f1f2fb 100%); }
+
+    #adminApp::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(440px 440px at -4% 26%, rgba(167, 139, 250, 0.30), transparent 70%),
+        radial-gradient(400px 400px at 104% 16%, rgba(129, 140, 248, 0.26), transparent 70%),
+        radial-gradient(540px 540px at 102% 102%, rgba(167, 139, 250, 0.28), transparent 70%),
+        radial-gradient(480px 480px at -6% 104%, rgba(96, 165, 250, 0.26), transparent 70%);
+    }
+
+    .content { position: relative; z-index: 1; }
+
+    .topbar {
+      height: 72px;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid #eceefb;
+      box-shadow: none;
+    }
+
+    .topbar-logo {
+      width: 44px; height: 44px; border-radius: 13px; font-size: 15px;
+      background: linear-gradient(145deg, #6366f1, #4338ca);
+      box-shadow: 0 10px 20px -8px rgba(79, 70, 229, 0.7);
+    }
+
+    .topbar-title { font-size: 18px; color: #0f172a; }
+
+    .admin-details { padding-right: 18px; border-right: 1px solid #e3e5f3; }
+    .admin-name { color: #0f172a; font-size: 14px; }
+    .admin-role { color: #94a3b8; }
+
+    .logout-button {
+      height: 42px; padding: 0 18px; border-radius: 12px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #eef0ff; border: 1px solid #dfe3ff; color: #4338ca; font-size: 14px; box-shadow: none;
+    }
+
+    .logout-button:hover { background: #e3e7ff; border-color: #cdd3ff; }
+
+    .logout-button svg {
+      width: 17px; height: 17px; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .tabbar {
+      top: 72px; background: rgba(255, 255, 255, 0.94); border-bottom: 1px solid #eceefb; box-shadow: none;
+    }
+
+    .tabbar-inner { gap: 4px; justify-content: flex-start; }
+
+    .tab-button { padding: 0 11px; color: #475569; }
+    .tab-button:hover { background: #f3f4ff; color: #1e293b; }
+    .tab-button.active { background: #eef0ff; color: #4338ca; border-color: #dfe3ff; }
+
+    /* ==============================
+       DASHBOARD HEADER
+       ============================== */
+
+    .dashboard-header { align-items: center; margin-bottom: 24px; }
+
+    .dashboard-header-text h2 { font-size: 38px; letter-spacing: -0.03em; color: #0f172a; }
+    .dashboard-header-text p { font-size: 15px; color: #7b8499; }
+
+    .date-chip {
+      display: inline-flex; align-items: center; gap: 10px; padding: 11px 18px; border-radius: 14px;
+      background: #fff; border: 1px solid #e6e8f6; color: #1e293b; font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 20px -14px rgba(79, 70, 229, 0.45);
+    }
+
+    .date-chip svg {
+      width: 18px; height: 18px; stroke: #4f46e5; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    /* ==============================
+       STAT CARDS — pastel, icon on the left
+       ============================== */
+
+    .dashboard-grid { gap: 16px; }
+
+    .stat-card {
+      min-height: 130px;
+      padding: 24px 16px 22px 104px;
+      display: flex; flex-direction: column; justify-content: center;
+      border-radius: 20px;
+      background: linear-gradient(120deg, #ffffff 0%, #ffffff 38%, var(--c-soft) 260%);
+      border: 1px solid #e8eaf7;
+      box-shadow: 0 12px 28px -20px rgba(79, 70, 229, 0.4);
+    }
+
+    .stat-card::after {
+      content: ''; position: absolute; right: -50px; bottom: -70px; width: 230px; height: 130px;
+      border-radius: 50%; background: var(--c-soft); opacity: 0.85; pointer-events: none;
+    }
+
+    .stat-label, .stat-value, .stat-note { position: relative; z-index: 1; }
+
+    .stat-icon {
+      z-index: 1; left: 22px; right: auto; top: 50%; transform: translateY(-50%);
+      width: 64px; height: 64px; border-radius: 19px;
+      background: var(--c-soft); color: var(--c); box-shadow: none;
+    }
+
+    .stat-icon svg { width: 30px; height: 30px; }
+
+    .stat-label { padding-right: 0; font-size: 11.5px; letter-spacing: 0.04em; white-space: nowrap; }
+    .stat-value { margin-top: 6px; font-size: 36px; letter-spacing: -0.03em; }
+    .stat-note { margin-top: 6px; font-size: 13px; color: #8a93a8; }
+
+    /* ==============================
+       TODAY'S STATUS — donut + legend
+       ============================== */
+
+    #panel-dashboard .dashboard-section .section-header { border-bottom: none; padding-bottom: 8px; background: none; }
+
+    .not-marked-badge {
+      padding: 9px 18px; background: #fff4d6; border: none; color: #8a5a00; font-size: 13px;
+    }
+
+    .link-button {
+      height: 40px; padding: 0 18px; border-radius: 12px; background: #fff;
+      border: 1px solid #c7cdfb; color: #4338ca; font-size: 14px;
+    }
+
+    .status-breakdown { display: flex; align-items: center; gap: 30px; padding: 8px 24px 26px; }
+
+    .donut {
+      flex: 0 0 auto; width: 112px; height: 112px; border-radius: 50%; background: #e2e8f0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .donut-hole {
+      width: 80px; height: 80px; border-radius: 50%; background: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      box-shadow: inset 0 0 0 1px #eef0f7;
+    }
+
+    .donut-hole strong { font-size: 24px; line-height: 1; color: #0f172a; }
+    .donut-hole span { margin-top: 3px; font-size: 11px; color: #8a93a8; }
+
+    .breakdown-main { flex: 1; min-width: 0; }
+
+    .status-bar { height: 12px; margin-bottom: 20px; border-radius: 999px; background: #e2e8f0; }
+
+    .status-legend { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 14px; }
+
+    .legend-item { display: flex; align-items: flex-start; gap: 9px; }
+
+    .legend-dot { flex: 0 0 auto; width: 13px; height: 13px; margin-top: 3px; border-radius: 50%; background: var(--d); }
+
+    .legend-label { display: block; font-size: 14px; font-weight: 600; color: #1e293b; }
+    .legend-value { display: block; margin-top: 2px; font-size: 13px; color: #8a93a8; white-space: nowrap; }
+
+    /* ==============================
+       SECTION CARDS, TABLES, BUTTONS (all tabs)
+       ============================== */
+
+    .dashboard-section {
+      border-radius: 20px; border: 1px solid #e8eaf7;
+      box-shadow: 0 14px 34px -24px rgba(79, 70, 229, 0.45);
+    }
+
+    .section-title h3 { font-size: 18px; color: #0f172a; }
+
+    .attendance-table th { background: #f6f7ff; color: #6b7280; }
+    .attendance-table tbody tr:hover td { background: #fafaff; }
+
+    .avatar { background: #eef0ff; color: #4f46e5; }
+    .attendance-table tbody tr:nth-child(5n+2) .avatar { background: #fff1e6; color: #ea580c; }
+    .attendance-table tbody tr:nth-child(5n+3) .avatar { background: #dcfce7; color: #16a34a; }
+    .attendance-table tbody tr:nth-child(5n+4) .avatar { background: #fce7f3; color: #db2777; }
+    .attendance-table tbody tr:nth-child(5n+5) .avatar { background: #cffafe; color: #0891b2; }
+
+    .segmented { background: #f1f2fb; }
+
+    .attendance-save-button, .registration-generate-button {
+      background: linear-gradient(135deg, #5b52f0, #4338ca);
+      box-shadow: 0 12px 22px -12px rgba(67, 56, 202, 0.7);
+    }
+
+    .attendance-save-button:disabled, .registration-generate-button:disabled { background: #a5aac8; box-shadow: none; }
+
+    .registration-generate-button.is-secondary { background: #fff; color: #4338ca; border: 1px solid #c7cdfb; box-shadow: none; }
+    .registration-generate-button.is-secondary:disabled { background: #f3f4f9; color: #a3a9b8; border-color: #e6e8ef; }
+
+    /* ==============================
+       RESPONSIVE
+       ============================== */
+
+    @media (max-width: 1100px) {
+      .status-legend { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 860px) {
+
+      #loginScreen { padding: 20px; }
+
+      .login-shell { flex-direction: column; min-height: 0; max-width: 480px; }
+
+      .login-hero { flex: 0 0 auto; padding: 30px 28px; }
+      .hero-content h2 { font-size: 30px; }
+      .hero-rule, .hero-content p { display: none; }
+
+      .login-card { padding: 30px 26px 26px; }
+    }
+
+    @media (max-width: 800px) {
+
+      .topbar { height: 66px; }
+      .tabbar { top: 66px; }
+
+      .dashboard-header-text h2 { font-size: 28px; }
+
+      .stat-card { min-height: 112px; padding: 20px 18px 18px 92px; }
+      .stat-icon { left: 16px; width: 58px; height: 58px; border-radius: 17px; }
+      .stat-icon svg { width: 26px; height: 26px; }
+      .stat-value { font-size: 30px; }
+
+      .status-breakdown { flex-direction: column; align-items: stretch; gap: 20px; padding: 8px 18px 22px; }
+      .donut { align-self: center; }
+      .status-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tab-panel.active { animation: none; }
+    }
+
+
+    /* =====================================================================
+       DARK GRADIENT THEME + LEFT SIDEBAR  (cosmetic override — loaded last)
+       ===================================================================== */
+
+    :root {
+      --bg: #12122a;
+      --surface: rgba(255, 255, 255, 0.045);
+      --border: rgba(255, 255, 255, 0.09);
+      --border-soft: rgba(255, 255, 255, 0.06);
+      --text: #f4f5fb;
+      --text-2: #c3c8dc;
+      --muted: #94a0bd;
+      --primary: #7c6cf2;
+      --primary-dark: #a99bff;
+      --primary-soft: rgba(124, 108, 242, 0.18);
+      --ring: 0 0 0 3px rgba(124, 108, 242, 0.30);
+      --side-w: 262px;
+    }
+
+    #adminApp {
+      color: var(--text);
+      background:
+        radial-gradient(ellipse 520px 420px at 30% -6%, rgba(236, 110, 70, 0.55) 0, transparent 70%),
+        radial-gradient(ellipse 620px 520px at 88% 4%, rgba(34, 168, 130, 0.20) 0, transparent 70%),
+        radial-gradient(ellipse 700px 500px at 100% 100%, rgba(224, 70, 150, 0.35) 0, transparent 70%),
+        radial-gradient(ellipse 520px 480px at 18% 100%, rgba(255, 140, 60, 0.30) 0, transparent 70%),
+        linear-gradient(160deg, #1b1a33 0%, #23223f 45%, #1a2336 100%);
+      background-attachment: fixed;
+      padding-left: var(--side-w);
+    }
+
+    body { background: #12122a; }
+
+    /* ---------- Sidebar ---------- */
+    .tabbar {
+      position: fixed; top: 0; left: 0; bottom: 0; width: var(--side-w); z-index: 30;
+      display: flex; flex-direction: column;
+      background:
+        radial-gradient(circle at 20% 105%, rgba(190, 50, 160, 0.55) 0, transparent 45%),
+        rgba(14, 15, 32, 0.94);
+      border-right: 1px solid rgba(255, 255, 255, 0.07); border-bottom: none;
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      overflow-y: auto;
+    }
+
+    .side-brand { padding: 22px 18px 16px; text-align: center; }
+
+    .side-logo {
+      width: 58px; height: 58px; margin: 0 auto 14px; border-radius: 17px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #8b5cf6, #5b3df0); color: #fff;
+      font-size: 22px; font-weight: 800; letter-spacing: .02em;
+      box-shadow: 0 10px 26px rgba(124, 92, 246, 0.50);
+    }
+
+    .side-title { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: #fff; }
+    .side-sub { margin-top: 4px; font-size: 13px; color: var(--muted); }
+
+    .tabbar-inner {
+      flex-direction: column; gap: 6px; padding: 10px 16px 28px; max-width: none; margin: 0;
+      overflow: visible; justify-content: flex-start;
+    }
+
+    .tab-button {
+      width: 100%; height: 48px; padding: 0 16px; gap: 16px; justify-content: flex-start;
+      border-radius: 13px; border: 1px solid transparent; background: transparent;
+      color: #e3e6f3; font-size: 15px; font-weight: 600; text-align: left;
+    }
+
+    .tab-button svg { width: 22px; height: 22px; flex: 0 0 22px; }
+    .tab-button[data-tab="dashboard"] svg { stroke: #ff7ad9; }
+    .tab-button[data-tab="daily"] svg { stroke: #5aa9ff; }
+    .tab-button[data-tab="monthly"] svg { stroke: #4da3ff; }
+    .tab-button[data-tab="manage"] svg { stroke: #45d6c4; }
+    .tab-button[data-tab="devices"] svg { stroke: #b9c2dc; }
+    .tab-button[data-tab="holidays"] svg { stroke: #ffc233; }
+    .tab-button[data-tab="revoke"] svg { stroke: #c066ff; }
+    .tab-button[data-tab="employees"] svg { stroke: #45d6c4; }
+    .tab-button[data-tab="latereport"] svg { stroke: #ff6b6b; }
+
+    .tab-button:hover { background: rgba(255, 255, 255, 0.07); color: #fff; }
+
+    .tab-button.active {
+      color: #fff; border-color: rgba(190, 170, 255, 0.35);
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.62), rgba(99, 56, 190, 0.45));
+      box-shadow: 0 8px 22px rgba(95, 60, 200, 0.35), inset 0 1px 0 rgba(255,255,255,.12);
+    }
+
+    .tab-button.active svg { stroke: #fff; }
+
+    .tab-badge {
+      margin-left: auto; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px;
+      background: #ffb020; color: #3b2300; font-size: 12px; font-weight: 800;
+      display: none; align-items: center; justify-content: center;
+    }
+
+    /* ---------- Top bar (name / logout only) ---------- */
+    .topbar {
+      position: static; height: 76px; padding: 0 36px; background: transparent;
+      border: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+      justify-content: flex-end;
+    }
+
+    .topbar-left { display: none; }
+    .admin-info { gap: 16px; }
+    .admin-name { font-size: 16px; font-weight: 600; color: #fff; }
+    .admin-role { font-size: 13px; color: var(--muted); }
+
+    .admin-avatar {
+      width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #c04bff, #7c3aed); color: #fff; font-weight: 700; font-size: 16px;
+      box-shadow: 0 6px 18px rgba(160, 70, 255, 0.45);
+    }
+
+    .logout-button {
+      height: 48px; padding: 0 20px; border-radius: 13px; display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(124, 108, 242, 0.12); border: 1px solid rgba(150, 130, 255, 0.55);
+      color: #fff; font-size: 15px; font-weight: 600; box-shadow: none;
+    }
+
+    .logout-button svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; }
+    .logout-button:hover { background: rgba(124, 108, 242, 0.28); border-color: #a99bff; }
+
+    /* ---------- Content & headings ---------- */
+    .content { max-width: none; margin: 0; padding: 4px 36px 56px; }
+
+    .dashboard-header-text h2 { font-size: 40px; font-weight: 700; letter-spacing: -0.02em; color: #fff; }
+    .dashboard-header-text p { font-size: 18px; color: var(--muted); }
+
+    .date-chip {
+      height: 58px; padding: 0 22px; border-radius: 15px; font-size: 17px; font-weight: 600; color: #fff;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: none;
+    }
+
+    .date-chip svg { stroke: #fff; }
+
+    /* ---------- Stat cards ---------- */
+    .dashboard-grid { gap: 20px; }
+
+    .stat-card {
+      --acc: #22c55e; --g1: rgba(14, 116, 110, 0.85); --g2: rgba(8, 70, 80, 0.75);
+      position: relative; min-height: 140px; padding: 20px 22px 20px 112px;
+      border-radius: 16px; border: 1px solid var(--acc);
+      background: linear-gradient(135deg, var(--g1), var(--g2)); color: #fff; overflow: hidden;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    }
+
+    .stat-card:hover { transform: translateY(-2px); }
+
+    .stat-card .stat-icon {
+      position: absolute; left: 20px; right: auto; top: 50%; transform: translateY(-50%); width: 76px; height: 76px; border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(145deg, var(--ic1, #22c55e), var(--ic2, #15803d)); color: #fff;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.30);
+    }
+
+    .stat-card .stat-icon svg { width: 38px; height: 38px; stroke: #fff; fill: none; stroke-width: 2.2; }
+    .stat-label { font-size: 15px; font-weight: 700; letter-spacing: .03em; color: #fff; }
+    .stat-value { margin-top: 4px; font-size: 44px; font-weight: 700; line-height: 1.1; color: #fff; }
+    .stat-note { font-size: 15px; color: rgba(255, 255, 255, 0.82); }
+
+    .stat-card::after {
+      content: ''; position: absolute; right: 22px; bottom: 20px; width: 40px; height: 52px; pointer-events: none;
+      background:
+        linear-gradient(var(--acc), var(--acc)) 0 100% / 9px 42% no-repeat,
+        linear-gradient(var(--acc), var(--acc)) 15px 100% / 9px 68% no-repeat,
+        linear-gradient(var(--acc), var(--acc)) 30px 100% / 9px 100% no-repeat;
+      opacity: .85; border-radius: 4px;
+    }
+
+    .stat-card                { --acc: #22c55e; --g1: rgba(15, 118, 110, .88); --g2: rgba(10, 74, 82, .80); --ic1: #20c07a; --ic2: #0f8f63; }
+    .stat-card.present-card   { --acc: #22c55e; --g1: rgba(22, 135, 74, .90);  --g2: rgba(15, 92, 60, .82);  --ic1: #6ee87a; --ic2: #1fb455; }
+    .stat-card.absent-card    { --acc: #f43f5e; --g1: rgba(150, 30, 55, .90);  --g2: rgba(95, 22, 45, .85);  --ic1: #ff5a6e; --ic2: #e11d48; }
+    .stat-card.wfh-card       { --acc: #f59e0b; --g1: rgba(175, 100, 10, .90); --g2: rgba(120, 65, 10, .85); --ic1: #ffb21a; --ic2: #f08a00; }
+    .stat-card.sick-card      { --acc: #f59e0b; --g1: rgba(175, 100, 10, .90); --g2: rgba(120, 65, 10, .85); --ic1: #ffb21a; --ic2: #f08a00; }
+    .stat-card.leave-card     { --acc: #a78bfa; --g1: rgba(110, 50, 190, .88); --g2: rgba(70, 35, 140, .85); --ic1: #b46bff; --ic2: #7c3aed; }
+    .stat-card.halfday-card   { --acc: #22d3ee; --g1: rgba(14, 120, 150, .88); --g2: rgba(10, 75, 110, .82); --ic1: #26d6e8; --ic2: #0891b2; }
+    .stat-card.device-card    { --acc: #ec4899; --g1: rgba(165, 40, 130, .88); --g2: rgba(110, 30, 105, .85); --ic1: #ff5fa8; --ic2: #d62a8a; }
+
+    /* ---------- Panels / sections ---------- */
+    .dashboard-section {
+      background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    }
+
+    .section-title h3 { color: #fff; font-size: 22px; }
+    .section-title p { color: var(--muted); }
+
+    .not-marked-badge {
+      background: rgba(245, 158, 11, 0.16); border: 1px solid rgba(245, 158, 11, 0.55); color: #ffc65c;
+      border-radius: 11px; font-weight: 600;
+    }
+
+    .link-button {
+      background: linear-gradient(135deg, #4338ca, #3730a3); border: 1px solid rgba(140, 130, 255, 0.55);
+      color: #fff; border-radius: 11px; font-weight: 600;
+    }
+
+    .link-button:hover { filter: brightness(1.15); background: linear-gradient(135deg, #4f46e5, #3730a3); }
+
+    /* ---------- Today's status chart ---------- */
+    .donut-hole { background: #1d1d38; }
+    .donut-hole strong { color: #fff; }
+    .donut-hole span { color: var(--muted); }
+    .status-bar { background: rgba(148, 163, 184, 0.35); }
+    .legend-label { color: #fff; }
+    .legend-value { color: var(--muted); }
+
+    /* ---------- Controls ---------- */
+    .monthly-control label, .attendance-field label, .device-registration-field label, .field label { color: var(--text-2); }
+
+    .monthly-control input, .monthly-control select,
+    .attendance-field input, .attendance-field select, .attendance-field textarea,
+    .device-registration-field select, .device-registration-field input,
+    .unmarked-status-select {
+      background-color: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #fff; color-scheme: dark; border-radius: 11px;
+    }
+
+    .monthly-control select option, .attendance-field select option,
+    .device-registration-field select option, .unmarked-status-select option { background: #23223f; color: #fff; }
+
+    .monthly-control input:focus, .monthly-control select:focus,
+    .attendance-field input:focus, .attendance-field select:focus, .attendance-field textarea:focus,
+    .device-registration-field select:focus, .unmarked-status-select:focus {
+      border-color: #8f80ff; box-shadow: var(--ring); outline: none;
+    }
+
+    .segmented { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.10); }
+    .seg-button { color: var(--text-2); }
+    .seg-button:hover { color: #fff; }
+    .seg-button.is-active { background: linear-gradient(135deg, #6d4cf0, #4f2fc4); color: #fff; box-shadow: 0 4px 12px rgba(90, 60, 220, .4); }
+
+    #unmarkedCount { background: #ffb020; color: #3b2300; }
+
+    .refresh-attendance-button, .export-button {
+      background: rgba(124, 108, 242, 0.16); border: 1px solid rgba(150, 130, 255, 0.5); color: #fff; box-shadow: none;
+    }
+
+    .refresh-attendance-button:hover, .export-button:hover { background: rgba(124, 108, 242, 0.32); }
+
+    .attendance-save-button, .registration-generate-button {
+      background: linear-gradient(135deg, #7c5cf6, #5b3df0); color: #fff; border: none;
+      box-shadow: 0 8px 20px rgba(100, 70, 230, 0.40);
+    }
+
+    .registration-generate-button.is-secondary {
+      background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.18); color: #fff; box-shadow: none;
+    }
+
+    .danger-button { background: linear-gradient(135deg, #e11d48, #9f1239); color: #fff; border: none; }
+
+    /* ---------- Tables ---------- */
+    .table-wrapper { border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 14px; background: rgba(8, 8, 24, 0.28); }
+
+    .attendance-table { color: var(--text); }
+
+    .attendance-table th {
+      background: rgba(255, 255, 255, 0.06); color: #b3bdd8; border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      text-transform: uppercase; letter-spacing: .05em; font-size: 12px;
+    }
+
+    .attendance-table th small { text-transform: none; letter-spacing: 0; color: #8e9ab8; }
+    .attendance-table td { color: var(--text); border-bottom: 1px solid rgba(255, 255, 255, 0.06); background: transparent; }
+    .attendance-table tbody tr:hover td { background: rgba(255, 255, 255, 0.05); }
+    .employee-id { color: var(--muted); }
+    .note-cell { color: var(--muted); }
+
+    .avatar { background: rgba(124, 108, 242, 0.25); color: #cfc8ff; }
+    .attendance-table tbody tr:nth-child(5n+2) .avatar { background: rgba(255, 140, 60, 0.25); color: #ffc08a; }
+    .attendance-table tbody tr:nth-child(5n+3) .avatar { background: rgba(34, 197, 94, 0.25); color: #86efac; }
+    .attendance-table tbody tr:nth-child(5n+4) .avatar { background: rgba(236, 72, 153, 0.25); color: #f9a8d4; }
+    .attendance-table tbody tr:nth-child(5n+5) .avatar { background: rgba(34, 211, 238, 0.25); color: #67e8f9; }
+
+    .status-present  { background: rgba(34, 197, 94, 0.18);  color: #6ee79a; }
+    .status-wfh      { background: rgba(59, 130, 246, 0.20); color: #8fbaff; }
+    .status-sickleave{ background: rgba(245, 158, 11, 0.20); color: #ffc65c; }
+    .status-leave    { background: rgba(167, 139, 250, 0.22);color: #c8b8ff; }
+    .status-halfday  { background: rgba(34, 211, 238, 0.18); color: #6ee7f9; }
+    .status-absent   { background: rgba(244, 63, 94, 0.20);  color: #ff8a9f; }
+    .status-notmarked{ background: rgba(148, 163, 184, 0.20);color: #cbd5e1; }
+    .status-holiday  { background: rgba(236, 72, 153, 0.20); color: #f9a8d4; }
+
+    .attendance-good .pct-pill   { background: rgba(34, 197, 94, 0.20);  color: #6ee79a; }
+    .attendance-medium .pct-pill { background: rgba(245, 158, 11, 0.20); color: #ffc65c; }
+    .attendance-low .pct-pill    { background: rgba(244, 63, 94, 0.20);  color: #ff8a9f; }
+
+    .type-pill.holiday { background: rgba(244, 63, 94, 0.20); color: #ff8a9f; }
+    .type-pill.working { background: rgba(34, 197, 94, 0.20); color: #6ee79a; }
+    .table-link { color: #a99bff; }
+
+    /* ---------- Messages & misc ---------- */
+    .inline-message.success, .attendance-message.success, .registration-message.success {
+      background: rgba(34, 197, 94, 0.14); border: 1px solid rgba(34, 197, 94, 0.45); color: #86efac;
+    }
+
+    .inline-message.error, .attendance-message.error, .registration-message.error, .dashboard-error {
+      background: rgba(244, 63, 94, 0.14); border: 1px solid rgba(244, 63, 94, 0.45); color: #ffa3b3;
+    }
+
+    .notice, .info-note {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.10); color: var(--text-2);
+    }
+
+    .holiday-status { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--text-2); }
+    .holiday-status strong { color: #fff; }
+    .holiday-status.is-holiday { background: rgba(244, 63, 94, 0.12); border-color: rgba(244, 63, 94, 0.45); }
+    .holiday-status.is-working { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.45); }
+    .holiday-status .warn { color: #ffc65c; }
+
+    .registration-code-result {
+      background: rgba(124, 108, 242, 0.12); border: 1px dashed rgba(170, 155, 255, 0.55); color: #fff;
+    }
+
+    .registration-code-label, .registration-code-expiry, .registration-code-note { color: var(--text-2); }
+    .registration-code-value { color: #fff; }
+
+    .dashboard-loading, .dashboard-empty, .empty-state p { color: var(--muted); }
+    .empty-state h4 { color: #fff; }
+    .empty-icon { background: rgba(255, 255, 255, 0.07); }
+    .empty-icon svg { stroke: #b3bdd8; }
+
+    /* ---------- Narrow screens: sidebar becomes a left-aligned scrolling strip ---------- */
+    @media (max-width: 900px) {
+      #adminApp { padding-left: 0; }
+      .tabbar { position: sticky; top: 0; bottom: auto; width: auto; flex-direction: row; align-items: center; overflow: visible; }
+      .side-brand { display: none; }
+      .tabbar-inner { flex-direction: row; overflow-x: auto; padding: 10px 16px; gap: 6px; }
+      .tab-button { width: auto; flex: 0 0 auto; height: 42px; padding: 0 14px; gap: 10px; font-size: 14px; }
+      .topbar { height: 64px; padding: 0 16px; }
+      .content { padding: 4px 16px 40px; }
+      .dashboard-header-text h2 { font-size: 30px; }
+      .stat-card { padding-left: 100px; }
+    }
+
+    /* =====================================================================
+       LOGIN — dark gradient theme (matches the admin panel)
+       ===================================================================== */
+
+    #loginScreen {
+      background:
+        radial-gradient(ellipse 560px 440px at 22% -4%, rgba(236, 110, 70, 0.55) 0, transparent 70%),
+        radial-gradient(ellipse 620px 520px at 92% 8%, rgba(34, 168, 130, 0.20) 0, transparent 70%),
+        radial-gradient(ellipse 700px 520px at 100% 100%, rgba(224, 70, 150, 0.38) 0, transparent 70%),
+        radial-gradient(ellipse 520px 480px at 8% 100%, rgba(255, 140, 60, 0.30) 0, transparent 70%),
+        linear-gradient(160deg, #1b1a33 0%, #23223f 45%, #1a2336 100%);
+    }
+
+    .decor-1 { background: radial-gradient(circle at 40% 40%, rgba(167, 139, 250, 0.30), rgba(167, 139, 250, 0.02) 72%); }
+    .decor-2 { background: radial-gradient(circle, rgba(255, 140, 60, 0.22), rgba(255, 140, 60, 0.02) 74%); }
+    .decor-3 { background: radial-gradient(circle, rgba(34, 211, 238, 0.16), rgba(34, 211, 238, 0.02) 74%); }
+    .decor-4 { background: radial-gradient(circle, rgba(236, 72, 153, 0.30), rgba(236, 72, 153, 0.03) 74%); }
+    .decor-5, .decor-6 { border-color: rgba(190, 175, 255, 0.22); }
+
+    .login-shell {
+      background: rgba(16, 17, 36, 0.78); border: 1px solid rgba(255, 255, 255, 0.10);
+      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    .login-hero {
+      background:
+        radial-gradient(circle at 15% 0%, rgba(236, 110, 70, 0.50) 0, transparent 55%),
+        linear-gradient(150deg, #3b1f8f 0%, #5b2fc9 52%, #a53fc4 100%);
+    }
+
+    .hero-wave-1 { background: rgba(124, 58, 237, 0.50); }
+    .hero-wave-2 { background: rgba(236, 72, 153, 0.38); }
+    .hero-wave-3 { background: radial-gradient(circle at 30% 70%, rgba(255, 160, 110, 0.65), rgba(99, 102, 241, 0) 70%); }
+    .hero-rule { background: #ffb86b; }
+
+    .login-card { background: transparent; }
+
+    .brand-mark {
+      background: linear-gradient(145deg, #8b5cf6, #5b3df0);
+      box-shadow: 0 16px 30px -8px rgba(124, 92, 246, 0.70);
+    }
+
+    .brand h1 { color: #fff; -webkit-text-fill-color: #fff; }
+    .brand p { color: var(--muted); }
+
+    .field label { color: #dfe3f4; }
+
+    .field input, .field select {
+      background-color: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #fff; color-scheme: dark;
+    }
+
+    .field input::placeholder { color: #8c97b5; }
+    .field select option { background: #23223f; color: #fff; }
+
+    .field select {
+      background-image:
+        linear-gradient(45deg, transparent 50%, #c3c8dc 50%),
+        linear-gradient(135deg, #c3c8dc 50%, transparent 50%);
+    }
+
+    .field input:focus, .field select:focus {
+      background-color: rgba(255, 255, 255, 0.11); border-color: #9a8cff; box-shadow: var(--ring);
+    }
+
+    .field input:-webkit-autofill, .field input:-webkit-autofill:focus {
+      -webkit-text-fill-color: #fff; caret-color: #fff;
+      -webkit-box-shadow: 0 0 0 1000px #2b2950 inset; box-shadow: 0 0 0 1000px #2b2950 inset;
+    }
+
+    #adminPin { color: #fff; }
+
+    .pin-toggle { color: #b3bdd8; }
+    .pin-toggle:hover { background: rgba(255, 255, 255, 0.10); color: #fff; }
+
+    .login-button {
+      background: linear-gradient(135deg, #7c5cf6, #5b3df0);
+      box-shadow: 0 16px 28px -10px rgba(100, 70, 230, 0.75);
+    }
+
+    .login-button:hover { box-shadow: 0 18px 32px -10px rgba(120, 90, 250, 0.9); }
+    .login-button:disabled { background: #4a4a6e; color: #a0a6c4; }
+
+    #loginError { background: rgba(244, 63, 94, 0.14); border-color: rgba(244, 63, 94, 0.45); color: #ffa3b3; }
+    .login-footer { color: #8c97b5; }
   </style>
+   
 </head>
 
 <body>
 
-  <iframe id="adminFrame" title="Attendance Tracker — Admin Panel"></iframe>
+  <!-- ==============================
+       LOGIN SCREEN
+       ============================== -->
 
-  <div id="setupMessage">
-    <h2>One more step</h2>
-    <p>
-      Open <code>admin.html</code> in a text editor and replace
-      <code>PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE</code> with your
-      Apps Script web app URL (the one ending in <code>/exec</code>).
-    </p>
-  </div>
+  <section id="loginScreen">
+
+    <div class="login-decor decor-1"></div>
+    <div class="login-decor decor-2"></div>
+    <div class="login-decor decor-3"></div>
+    <div class="login-decor decor-4"></div>
+    <div class="login-decor decor-5"></div>
+    <div class="login-decor decor-6"></div>
+
+    <div class="login-shell">
+
+      <div class="login-hero">
+
+        <div class="hero-wave hero-wave-1"></div>
+        <div class="hero-wave hero-wave-2"></div>
+        <div class="hero-wave hero-wave-3"></div>
+
+        <div class="hero-content">
+          <div class="hero-eyebrow">WELCOME TO</div>
+          <h2>Attendance<br>Tracker</h2>
+          <div class="hero-rule"></div>
+          <p>Manage attendance, track productivity and stay organized with ease.</p>
+        </div>
+
+      </div>
+
+      <div class="login-card">
+
+        <div class="brand">
+          <div class="brand-mark">AT</div>
+          <h1>Attendance Tracker</h1>
+          <p>Admin Panel</p>
+        </div>
+
+        <div id="loginError"></div>
+
+        <form id="loginForm">
+
+          <div class="field">
+            <label for="adminSelect">Admin Name</label>
+            <select id="adminSelect" required>
+              <option value="">Loading admins…</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="adminPin">6-Digit Admin PIN</label>
+
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="adminPin"
+                inputmode="numeric"
+                autocomplete="current-password"
+                placeholder="••••••"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                required
+              >
+
+              <button type="button" id="togglePin" class="pin-toggle" aria-label="Show PIN">
+                <svg class="icon-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" id="loginButton" class="login-button">Sign In</button>
+
+        </form>
+
+        <div class="login-footer">Attendance Tracker</div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==============================
+       ADMIN APPLICATION
+       ============================== -->
+
+  <section id="adminApp">
+
+    <header class="topbar">
+
+      <div class="topbar-left">
+        <div class="topbar-logo">AT</div>
+        <div class="topbar-title">Attendance Tracker — Admin Panel</div>
+      </div>
+
+      <div class="admin-info">
+        <div class="admin-details">
+          <div id="adminName" class="admin-name"></div>
+          <div id="adminRole" class="admin-role"></div>
+        </div>
+        <div id="adminAvatar" class="admin-avatar">AD</div>
+        <button type="button" id="logoutButton" class="logout-button">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </button>
+      </div>
+
+    </header>
+
+
+    <!-- ==============================
+         TAB BAR
+         ============================== -->
+
+    <nav class="tabbar" aria-label="Admin sections">
+      <div class="side-brand">
+        <div class="side-logo">AT</div>
+        <div class="side-title">Attendance Tracker</div>
+        <div class="side-sub">Admin Panel</div>
+      </div>
+      <div class="tabbar-inner" id="tabList" role="tablist">
+
+        <button type="button" class="tab-button active" role="tab" data-tab="dashboard" aria-selected="true">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="daily" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>
+          Daily Attendance
+          <span id="tabUnmarkedBadge" class="tab-badge"></span>
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="monthly" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Monthly Report
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="manage" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          Manage Attendance
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="devices" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          Device Registration
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="holidays" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>
+          Holiday Maker
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="revoke" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Revoke Device
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="employees" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Employees
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="latereport" aria-selected="false" tabindex="-1">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Late Report
+        </button>
+
+      </div>
+    </nav>
+
+
+    <main class="content">
+
+      <!-- Shown on any tab when a dashboard request fails -->
+      <div id="dashboardError" class="dashboard-error"></div>
+
+
+      <!-- ==============================
+           TAB 1 — DASHBOARD
+           ============================== -->
+
+      <section class="tab-panel active" id="panel-dashboard" role="tabpanel">
+
+        <div class="dashboard-header">
+          <div class="dashboard-header-text">
+            <h2>Dashboard</h2>
+            <p id="dashboardSubtitle">Today's attendance overview.</p>
+          </div>
+
+          <div class="date-chip">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="dashboardDateChip">—</span>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+
+          <div class="stat-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+            <div class="stat-label">TOTAL EMPLOYEES</div>
+            <div id="statTotalEmployees" class="stat-value">—</div>
+            <div class="stat-note">Active employees</div>
+          </div>
+
+          <div class="stat-card present-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+            <div class="stat-label">PRESENT TODAY</div>
+            <div id="statPresent" class="stat-value">—</div>
+            <div class="stat-note">Office attendance</div>
+          </div>
+
+          <div class="stat-card absent-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>
+            <div class="stat-label">ABSENT TODAY</div>
+            <div id="statAbsent" class="stat-value">—</div>
+            <div class="stat-note">Marked absent</div>
+          </div>
+
+          <div class="stat-card wfh-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+            <div class="stat-label">WFH TODAY</div>
+            <div id="statWfh" class="stat-value">—</div>
+            <div class="stat-note">Working from home</div>
+          </div>
+
+          <div class="stat-card sick-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+            <div class="stat-label">SICK LEAVE TODAY</div>
+            <div id="statSickLeave" class="stat-value">—</div>
+            <div class="stat-note">Eligible sick leave</div>
+          </div>
+
+          <div class="stat-card leave-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+            <div class="stat-label">APPROVED LEAVE TODAY</div>
+            <div id="statLeave" class="stat-value">—</div>
+            <div class="stat-note">Approved / recorded leave</div>
+          </div>
+
+          <div class="stat-card halfday-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+            <div class="stat-label">HALF DAY TODAY</div>
+            <div id="statHalfDay" class="stat-value">—</div>
+            <div class="stat-note">0.5 attendance credit</div>
+          </div>
+
+          <div class="stat-card device-card">
+            <span class="stat-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
+            <div class="stat-label">REGISTERED DEVICES</div>
+            <div id="statRegisteredDevices" class="stat-value">—</div>
+            <div class="stat-note">Active employee devices</div>
+          </div>
+
+        </div>
+
+        <div class="dashboard-section">
+          <div class="section-header">
+
+            <div class="section-title">
+              <h3 id="todayStatusTitle">Today's Status</h3>
+              <p id="todayStatusSubtitle">Attendance status for today.</p>
+            </div>
+
+            <div class="glance-actions">
+              <span id="notMarkedBadge" class="not-marked-badge">Not Marked: —</span>
+              <button type="button" class="link-button" data-goto="daily">View details →</button>
+            </div>
+
+          </div>
+
+        <div class="status-breakdown">
+
+          <div id="statusDonut" class="donut">
+            <div class="donut-hole">
+              <strong id="donutTotal">—</strong>
+              <span>Total</span>
+            </div>
+          </div>
+
+          <div class="breakdown-main">
+
+            <div id="statusBar" class="status-bar"></div>
+
+            <div class="status-legend">
+              <div class="legend-item"><span class="legend-dot" style="--d: #22c55e;"></span><div><span class="legend-label">Present</span><span class="legend-value" id="legendPresent">0 (0%)</span></div></div>
+              <div class="legend-item"><span class="legend-dot" style="--d: #f43f5e;"></span><div><span class="legend-label">Absent</span><span class="legend-value" id="legendAbsent">0 (0%)</span></div></div>
+              <div class="legend-item"><span class="legend-dot" style="--d: #3b82f6;"></span><div><span class="legend-label">WFH</span><span class="legend-value" id="legendWfh">0 (0%)</span></div></div>
+              <div class="legend-item"><span class="legend-dot" style="--d: #f59e0b;"></span><div><span class="legend-label">Sick Leave</span><span class="legend-value" id="legendSickLeave">0 (0%)</span></div></div>
+              <div class="legend-item"><span class="legend-dot" style="--d: #a78bfa;"></span><div><span class="legend-label">Approved Leave</span><span class="legend-value" id="legendLeave">0 (0%)</span></div></div>
+              <div class="legend-item"><span class="legend-dot" style="--d: #22d3ee;"></span><div><span class="legend-label">Half Day</span><span class="legend-value" id="legendHalfDay">0 (0%)</span></div></div>
+              <div class="legend-item"><span class="legend-dot" style="--d: #cbd5e1;"></span><div><span class="legend-label">Not Marked</span><span class="legend-value" id="legendNotMarked">0 (0%)</span></div></div>
+            </div>
+
+          </div>
+
+        </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 2 — DAILY ATTENDANCE
+           ============================== -->
+
+      <section class="tab-panel" id="panel-daily" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+
+            <div class="section-title">
+              <h3 id="dailyTitle">Today's Status</h3>
+              <p id="dailySubtitle">Attendance of every employee for the selected date.</p>
+            </div>
+
+            <div class="toolbar">
+
+              <div class="monthly-control">
+                <label for="dailyAttendanceDate">Date</label>
+                <input type="date" id="dailyAttendanceDate">
+              </div>
+
+              <div class="segmented">
+                <button type="button" id="dailyAllButton" class="seg-button is-active">All Employees</button>
+                <button type="button" id="unmarkedButton" class="seg-button">
+                  Unmarked
+                  <span id="unmarkedCount">—</span>
+                </button>
+              </div>
+
+              <button type="button" id="refreshAttendanceButton" class="refresh-attendance-button">Refresh</button>
+
+            </div>
+
+          </div>
+
+          <div id="dailyNotice" class="notice" style="display: none;"></div>
+
+          <div id="dailyMessage" class="inline-message"></div>
+
+          <div id="dailyTableLoading" class="dashboard-loading">
+            <div class="dashboard-spinner"></div>
+            Loading attendance data…
+          </div>
+
+          <div id="dailyTableContainer" class="table-wrapper" style="display: none;">
+            <table class="attendance-table">
+              <thead id="dailyTableHead"></thead>
+              <tbody id="dailyTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="dailyTableEmpty" class="dashboard-empty" style="display: none;">
+            No employees found.
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 3 — MONTHLY REPORT
+           ============================== -->
+
+      <section class="tab-panel" id="panel-monthly" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+
+            <div class="section-title">
+              <h3 id="monthlySectionTitle">Monthly Attendance</h3>
+              <p>Employee attendance summary for the selected month.</p>
+            </div>
+
+            <div class="toolbar">
+
+              <button type="button" id="exportMonthlyButton" class="export-button" title="Download this month's attendance as an Excel (.xlsx) file">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span id="exportButtonLabel">Export</span>
+              </button>
+
+              <div class="monthly-control">
+                <label for="monthSelector">Month</label>
+                <select id="monthSelector">
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+
+              <button type="button" id="monthlyRefreshButton" class="refresh-attendance-button">Refresh</button>
+
+            </div>
+
+          </div>
+
+          <div id="monthlyMessage" class="inline-message"></div>
+
+          <div id="monthlyTableLoading" class="dashboard-loading">
+            <div class="dashboard-spinner"></div>
+            Loading attendance data…
+          </div>
+
+          <div id="monthlyTableContainer" class="table-wrapper" style="display: none;">
+            <table class="attendance-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Present</th>
+                  <th>WFH</th>
+                  <th>Sick Leave</th>
+                  <th>Approved Leave</th>
+                  <th>Half Day</th>
+                  <th>Absent</th>
+                  <th>Attendance</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="monthlyTableEmpty" class="dashboard-empty" style="display: none;">
+            No employee attendance data available.
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 4 — MANAGE ATTENDANCE
+           ============================== -->
+
+      <section class="tab-panel" id="panel-manage" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Manage Attendance</h3>
+              <p>Add or update an employee's attendance record.</p>
+            </div>
+          </div>
+
+          <div class="attendance-management">
+            <div class="attendance-form">
+
+              <div class="attendance-field">
+                <label for="attendanceDate">Date</label>
+                <input type="date" id="attendanceDate">
+              </div>
+
+              <div class="attendance-field">
+                <label for="attendanceEmployee">Employee</label>
+                <select id="attendanceEmployee">
+                  <option value="">Select Employee</option>
+                </select>
+              </div>
+
+              <div class="attendance-field">
+                <label for="attendanceStatus">Attendance Status</label>
+                <select id="attendanceStatus">
+                  <option value="">Select Status</option>
+                  <option value="Present">Present</option>
+                  <option value="WFH">WFH</option>
+                  <option value="Sick Leave">Sick Leave</option>
+                  <option value="Leave">Approved Leave</option>
+                  <option value="Half Day">Half Day</option>
+                  <option value="Absent">Absent</option>
+                </select>
+              </div>
+
+              <div class="attendance-field">
+                <label for="attendanceNotes">Notes</label>
+                <textarea id="attendanceNotes" placeholder="Optional note..."></textarea>
+              </div>
+
+              <div class="attendance-field full-width">
+                <div class="attendance-actions">
+                  <button type="button" id="attendanceSaveButton" class="attendance-save-button">
+                    Save Attendance
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div id="attendanceMessage" class="attendance-message"></div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 5 — DEVICE REGISTRATION
+           ============================== -->
+
+      <section class="tab-panel" id="panel-devices" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Device Registration</h3>
+              <p>Generate a temporary registration code for an employee's device.</p>
+            </div>
+          </div>
+
+          <div class="device-registration">
+
+            <div class="device-registration-form">
+
+              <div class="device-registration-field">
+                <label for="registrationEmployee">Employee</label>
+                <select id="registrationEmployee">
+                  <option value="">Loading employees…</option>
+                </select>
+              </div>
+
+              <button type="button" id="generateRegistrationCodeButton" class="registration-generate-button">
+                Generate Registration Code
+              </button>
+
+            </div>
+
+            <div id="registrationCodeResult" class="registration-code-result" style="display: none;">
+
+              <div class="registration-code-label">Registration Code</div>
+
+              <div id="registrationCodeValue" class="registration-code-value">—</div>
+
+              <div id="registrationCodeExpiry" class="registration-code-expiry">—</div>
+
+              <div class="registration-code-note">
+                Give this code to the employee. It expires automatically after
+                10 minutes and can only be used once.
+              </div>
+
+            </div>
+
+            <div id="registrationMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 6 — HOLIDAY MAKER
+           ============================== -->
+
+      <section class="tab-panel" id="panel-holidays" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Holiday Maker</h3>
+              <p>Mark a date as a holiday so employees cannot mark attendance, or open a Sunday so they can.</p>
+            </div>
+          </div>
+
+          <div class="attendance-management">
+
+            <div class="attendance-form">
+
+              <div class="attendance-field">
+                <label for="holidayDate">Date</label>
+                <input type="date" id="holidayDate">
+              </div>
+
+              <div class="attendance-field" id="holidayNoteField">
+                <label for="holidayNote" id="holidayNoteLabel">Holiday note</label>
+                <input
+                  type="text"
+                  id="holidayNote"
+                  maxlength="100"
+                  autocomplete="off"
+                  placeholder="e.g. Diwali — Public Holiday"
+                >
+              </div>
+
+              <div class="attendance-field full-width">
+                <div id="holidayStatusBox" class="holiday-status">
+                  Select a date to see its status.
+                </div>
+              </div>
+
+              <div class="attendance-field full-width">
+                <div class="attendance-actions">
+                  <button type="button" id="holidayActionButton" class="registration-generate-button" disabled>
+                    Mark as Holiday
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <div id="holidayMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3 id="holidayListTitle">Holidays &amp; Working Sundays</h3>
+              <p>Select a row to change that date.</p>
+            </div>
+          </div>
+
+          <div id="holidayListLoading" class="dashboard-loading">
+            <div class="dashboard-spinner"></div>
+            Loading holidays…
+          </div>
+
+          <div id="holidayListContainer" class="table-wrapper" style="display: none;">
+            <table class="attendance-table" style="min-width: 560px;">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Note</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="holidayListBody"></tbody>
+            </table>
+          </div>
+
+          <div id="holidayListEmpty" class="dashboard-empty" style="display: none;">
+            No holidays marked yet.
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 7 — REVOKE DEVICE
+           ============================== -->
+
+      <section class="tab-panel" id="panel-revoke" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Revoke Device</h3>
+              <p>Remove an employee's registered device so a new one can be registered.</p>
+            </div>
+          </div>
+
+          <div class="device-registration">
+
+            <div class="device-registration-form">
+
+              <div class="device-registration-field">
+                <label for="revokeEmployee">Employee</label>
+                <select id="revokeEmployee">
+                  <option value="">Loading devices…</option>
+                </select>
+              </div>
+
+              <button type="button" id="revokeDeviceButton" class="danger-button" disabled>
+                Revoke Device
+              </button>
+
+            </div>
+
+            <div class="attendance-field stack-gap">
+              <label for="revokeReason">Reason (optional)</label>
+              <input
+                type="text"
+                id="revokeReason"
+                maxlength="100"
+                autocomplete="off"
+                placeholder="e.g. Phone lost or replaced"
+              >
+            </div>
+
+            <div class="info-note stack-gap">
+              Only employees who currently have an active device are listed.
+              After revoking, create a new registration code for the employee
+              from the <strong>Device Registration</strong> tab.
+            </div>
+
+            <div id="revokeMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 8 — EMPLOYEES (ADD / REMOVE)
+           ============================== -->
+
+      <section class="tab-panel" id="panel-employees" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Add Employee</h3>
+              <p>Add a new employee to the attendance system.</p>
+            </div>
+          </div>
+
+          <div class="attendance-management">
+
+            <div class="attendance-form">
+
+              <div class="attendance-field">
+                <label for="newEmployeeName">Employee Name</label>
+                <input
+                  type="text"
+                  id="newEmployeeName"
+                  maxlength="80"
+                  autocomplete="off"
+                  placeholder="Full name"
+                >
+              </div>
+
+              <div class="attendance-field">
+                <label for="newEmployeeDepartment">Department (optional)</label>
+                <input
+                  type="text"
+                  id="newEmployeeDepartment"
+                  maxlength="60"
+                  autocomplete="off"
+                  placeholder="e.g. Sales"
+                >
+              </div>
+
+              <div class="attendance-field full-width">
+                <div class="attendance-actions">
+                  <button type="button" id="addEmployeeButton" class="attendance-save-button">
+                    Add Employee
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="info-note stack-gap">
+              The Employee ID is assigned automatically (the next EMP number),
+              the joining date is today, and the status is set to Active.
+            </div>
+
+            <div id="addEmployeeMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Remove Employee</h3>
+              <p>Mark an employee as Inactive. Their attendance history is kept.</p>
+            </div>
+          </div>
+
+          <div class="device-registration">
+
+            <div class="device-registration-form">
+
+              <div class="device-registration-field">
+                <label for="removeEmployeeSelect">Employee</label>
+                <select id="removeEmployeeSelect">
+                  <option value="">Loading employees…</option>
+                </select>
+              </div>
+
+              <button type="button" id="removeEmployeeButton" class="danger-button">
+                Remove Employee
+              </button>
+
+            </div>
+
+            <div class="info-note stack-gap">
+              This changes the employee's status from Active to Inactive.
+              If they still have a registered device, revoke it from the
+              <strong>Revoke Device</strong> tab.
+            </div>
+
+            <div id="removeEmployeeMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ==============================
+           TAB 9 — LATE REPORT / IN-TIME
+           ============================== -->
+
+      <section class="tab-panel" id="panel-latereport" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+
+            <div class="section-title">
+              <h3 id="lateReportSectionTitle">Late Report</h3>
+              <p>Employee check-in time analysis for the selected month.</p>
+            </div>
+
+            <div class="toolbar">
+
+              <div class="monthly-control">
+                <label for="lateReportMonthSelector">Month</label>
+                <select id="lateReportMonthSelector">
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+
+              <button type="button" id="lateReportRefreshButton" class="refresh-attendance-button">Refresh</button>
+
+            </div>
+
+          </div>
+
+          <div id="lateReportMessage" class="inline-message"></div>
+
+          <div id="lateReportTableLoading" class="dashboard-loading">
+            <div class="dashboard-spinner"></div>
+            Loading late report data…
+          </div>
+
+          <div id="lateReportTableContainer" class="table-wrapper" style="display: none;">
+            <table class="attendance-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Marked Days</th>
+                  <th>On Time<br><small>(Before 10:30 AM)</small></th>
+                  <th>Late<br><small>(10:30 – 11:00 AM)</small></th>
+                  <th>Late<br><small>(After 11:00 AM)</small></th>
+                  <th>Marked by Admin</th>
+                </tr>
+              </thead>
+              <tbody id="lateReportTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="lateReportTableEmpty" class="dashboard-empty" style="display: none;">
+            No employee late report data available.
+          </div>
+
+        </div>
+
+      </section>
+
+
+    </main>
+
+  </section>
+
 
   <script>
 
     /*************************************************
-     * Paste your Apps Script Web App URL here
-     * (the same one used in index.html).
+     * CLIENT STATE + HELPERS
      *************************************************/
 
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQRcGQQHlzgWKBEms2-Ua-MNecNd4AkvdasiAfSnIM71qtAJ1hF_3e_mmDMXWZtfcwYQ/exec';
+    const SESSION_STORAGE_KEY = 'attendance_admin_session';
 
-    const frame = document.getElementById('adminFrame');
-    const setupMessage = document.getElementById('setupMessage');
+    const TAB_NAMES = [
+      'dashboard', 'daily', 'monthly', 'manage',
+      'devices', 'holidays', 'revoke', 'employees', 'latereport'
+    ];
 
-    if (/^https:\/\/script\.google\.com\/.+\/exec$/.test(APPS_SCRIPT_URL)) {
+    function $(id) {
+      return document.getElementById(id);
+    }
 
-      frame.src = APPS_SCRIPT_URL + '?page=admin';
 
-    } else {
+    /*************************************************
+     * ELEMENTS — LOGIN / SHELL
+     *************************************************/
 
-      frame.style.display = 'none';
-      setupMessage.style.display = 'block';
+    const loginScreen = $('loginScreen');
+    const adminApp = $('adminApp');
+    const loginForm = $('loginForm');
+    const loginButton = $('loginButton');
+    const loginError = $('loginError');
+    const adminSelect = $('adminSelect');
+    const adminPinInput = $('adminPin');
+    const adminName = $('adminName');
+    const adminRole = $('adminRole');
+    const logoutButton = $('logoutButton');
+    const tabList = $('tabList');
+    const tabUnmarkedBadge = $('tabUnmarkedBadge');
+
+
+    /*************************************************
+     * LOGIN ERROR
+     *************************************************/
+
+    function showLoginError(message) {
+      loginError.textContent = message;
+      loginError.style.display = 'block';
+    }
+
+    function clearLoginError() {
+      loginError.textContent = '';
+      loginError.style.display = 'none';
+    }
+
+
+    /*************************************************
+     * SHOW / HIDE SCREENS
+     *************************************************/
+
+    function showLoginScreen() {
+      loginScreen.style.display = 'flex';
+      adminApp.style.display = 'none';
+      adminSelect.focus();
+    }
+
+    function showAdminApp(session) {
+      loginScreen.style.display = 'none';
+      adminApp.style.display = 'block';
+
+      adminName.textContent = session.adminName || '';
+      adminRole.textContent = session.role || '';
+
+      initializeDashboard();
+    }
+
+
+    /*************************************************
+     * SESSION STORAGE
+     *************************************************/
+
+    function saveSession(session) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    }
+
+    function getSavedSession() {
+
+      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+
+      if (!stored) {
+        return null;
+      }
+
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        return null;
+      }
+    }
+
+    function clearSession() {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+
+
+    /*************************************************
+     * LOAD ADMIN OPTIONS
+     *************************************************/
+
+    function loadAdminOptions() {
+
+      adminSelect.innerHTML = '<option value="">Loading admins…</option>';
+
+      google.script.run
+
+        .withSuccessHandler(function(admins) {
+
+          adminSelect.innerHTML = '<option value="">Select your name</option>';
+
+          if (!admins || admins.length === 0) {
+            adminSelect.innerHTML = '<option value="">No active admins found</option>';
+            return;
+          }
+
+          admins.forEach(function(admin) {
+
+            const option = document.createElement('option');
+
+            option.value = admin.adminId;
+            option.textContent = admin.adminName;
+
+            adminSelect.appendChild(option);
+
+          });
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          adminSelect.innerHTML = '<option value="">Unable to load admins</option>';
+
+          showLoginError(
+            error && error.message
+              ? error.message
+              : 'Unable to load admin list.'
+          );
+
+        })
+
+        .getAdminLoginOptions();
+    }
+
+
+    /*************************************************
+     * ADMIN LOGIN
+     *************************************************/
+
+    loginForm.addEventListener('submit', function(event) {
+
+      event.preventDefault();
+
+      clearLoginError();
+
+      const adminId = adminSelect.value.trim().toUpperCase();
+      const adminPin = adminPinInput.value.trim();
+
+      if (!adminId) {
+        showLoginError('Please select your name.');
+        return;
+      }
+
+      if (!/^\d{6}$/.test(adminPin)) {
+        showLoginError('Admin PIN must contain exactly 6 digits.');
+        return;
+      }
+
+      loginButton.disabled = true;
+      loginButton.textContent = 'Signing In…';
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          loginButton.disabled = false;
+          loginButton.textContent = 'Sign In';
+
+          if (!result || !result.success) {
+            showLoginError(
+              result && result.reason
+                ? result.reason
+                : 'Unable to sign in.'
+            );
+            return;
+          }
+
+          saveSession(result);
+
+          adminPinInput.value = '';
+
+          resetPinVisibility();
+
+          showAdminApp(result);
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          loginButton.disabled = false;
+          loginButton.textContent = 'Sign In';
+
+          showLoginError(
+            error && error.message
+              ? error.message
+              : 'An unexpected error occurred.'
+          );
+
+        })
+
+        .adminLogin(adminId, adminPin);
+
+    });
+
+
+    /*************************************************
+     * SESSION CHECK
+     *************************************************/
+
+    function checkExistingSession() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showLoginScreen();
+        return;
+      }
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          if (!result || !result.authenticated) {
+            clearSession();
+            showLoginScreen();
+            return;
+          }
+
+          const refreshedSession = {
+            sessionToken: session.sessionToken,
+            adminId: result.adminId,
+            adminName: result.adminName,
+            role: result.role,
+            expiresAt: result.expiresAt
+          };
+
+          saveSession(refreshedSession);
+
+          showAdminApp(refreshedSession);
+
+        })
+
+        .withFailureHandler(function() {
+          clearSession();
+          showLoginScreen();
+        })
+
+        .getAdminSessionInfo(session.sessionToken);
 
     }
 
+
+    /*************************************************
+     * LOGOUT
+     *************************************************/
+
+    logoutButton.addEventListener('click', function() {
+
+      const session = getSavedSession();
+
+      clearSession();
+
+      if (!session || !session.sessionToken) {
+        showLoginScreen();
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function() { showLoginScreen(); })
+        .withFailureHandler(function() { showLoginScreen(); })
+        .adminLogout(session.sessionToken);
+
+    });
+
+
+    /*************************************************
+     * ADMIN PIN INPUT
+     *************************************************/
+
+    adminPinInput.addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+
+    /*************************************************
+     * TABS
+     *************************************************/
+
+    function switchTab(name) {
+
+      if (TAB_NAMES.indexOf(name) === -1) {
+        name = 'dashboard';
+      }
+
+      document.querySelectorAll('.tab-button').forEach(function(button) {
+
+        const isActive = button.dataset.tab === name;
+
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        button.tabIndex = isActive ? 0 : -1;
+
+        if (isActive) {
+          try {
+            button.scrollIntoView({ block: 'nearest', inline: 'center' });
+          } catch (error) {
+            // Older browsers: ignore.
+          }
+        }
+
+      });
+
+      document.querySelectorAll('.tab-panel').forEach(function(panel) {
+        panel.classList.toggle('active', panel.id === 'panel-' + name);
+      });
+
+      // Load data for tabs that need it on activation
+      if (name === 'latereport') {
+        loadLateReport();
+      }
+
+    }
+
+    tabList.addEventListener('click', function(event) {
+
+      const button = event.target.closest('.tab-button');
+
+      if (!button) {
+        return;
+      }
+
+      switchTab(button.dataset.tab);
+
+      window.scrollTo(0, 0);
+
+    });
+
+    tabList.addEventListener('keydown', function(event) {
+
+      const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+
+      if (keys.indexOf(event.key) === -1) {
+        return;
+      }
+
+      const buttons = Array.prototype.slice.call(
+        tabList.querySelectorAll('.tab-button')
+      );
+
+      let index = buttons.findIndex(function(button) {
+        return button.classList.contains('active');
+      });
+
+      if (event.key === 'ArrowRight') {
+        index = (index + 1) % buttons.length;
+      } else if (event.key === 'ArrowLeft') {
+        index = (index - 1 + buttons.length) % buttons.length;
+      } else if (event.key === 'Home') {
+        index = 0;
+      } else {
+        index = buttons.length - 1;
+      }
+
+      event.preventDefault();
+
+      switchTab(buttons[index].dataset.tab);
+
+      buttons[index].focus();
+
+    });
+
+    // Any element with data-goto="tabName" jumps to that tab.
+    document.addEventListener('click', function(event) {
+
+      const target = event.target.closest('[data-goto]');
+
+      if (!target) {
+        return;
+      }
+
+      switchTab(target.dataset.goto);
+
+      window.scrollTo(0, 0);
+
+    });
+
+
+    /*************************************************
+     * SHARED RENDER HELPERS
+     *************************************************/
+
+    function escapeHtml(value) {
+
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    }
+
+    function getInitials(name) {
+
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+
+      if (parts.length === 0) {
+        return '?';
+      }
+
+      if (parts.length === 1) {
+        return parts[0].charAt(0).toUpperCase();
+      }
+
+      return (
+        parts[0].charAt(0) +
+        parts[parts.length - 1].charAt(0)
+      ).toUpperCase();
+
+    }
+
+    function employeeCellHtml(name, id) {
+
+      return (
+        '<div class="emp">' +
+          '<span class="avatar">' + escapeHtml(getInitials(name)) + '</span>' +
+          '<div>' +
+            '<div class="employee-cell">' + escapeHtml(name) + '</div>' +
+            '<div class="employee-id">' + escapeHtml(id) + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+
+    }
+
+    function getStatusClass(status) {
+
+      return 'status-' + String(status || 'Not Marked')
+        .toLowerCase()
+        .replace(/[^a-z]/g, '');
+
+    }
+
+    function statusPillHtml(status) {
+
+      return (
+        '<span class="status-pill ' + getStatusClass(status) + '">' +
+          escapeHtml(status === 'Leave' ? 'Approved Leave' : (status || 'Not Marked')) +
+        '</span>'
+      );
+
+    }
+
+    function formatDisplayDate(dateKey) {
+
+      const parts = String(dateKey || '').split('-');
+
+      if (parts.length !== 3) {
+        return dateKey || '';
+      }
+
+      const date = new Date(
+        Number(parts[0]),
+        Number(parts[1]) - 1,
+        Number(parts[2])
+      );
+
+      if (isNaN(date.getTime())) {
+        return dateKey;
+      }
+
+      return date.toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+
+    }
+
+    function getTodayDateInputValue() {
+
+      const now = new Date();
+
+      return (
+        now.getFullYear() +
+        '-' +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(now.getDate()).padStart(2, '0')
+      );
+
+    }
+
+
+    /*************************************************
+     * ELEMENTS — DASHBOARD
+     *************************************************/
+
+    const dashboardSubtitle = $('dashboardSubtitle');
+    const statTotalEmployees = $('statTotalEmployees');
+    const statPresent = $('statPresent');
+    const statAbsent = $('statAbsent');
+    const statWfh = $('statWfh');
+    const statSickLeave = $('statSickLeave');
+    const statLeave = $('statLeave');
+    const statHalfDay = $('statHalfDay');
+    const statRegisteredDevices = $('statRegisteredDevices');
+    const todayStatusTitle = $('todayStatusTitle');
+    const todayStatusSubtitle = $('todayStatusSubtitle');
+    const notMarkedBadge = $('notMarkedBadge');
+    const dashboardError = $('dashboardError');
+
+
+    /*************************************************
+     * ELEMENTS — DAILY ATTENDANCE
+     *************************************************/
+
+    const dailyTitle = $('dailyTitle');
+    const dailySubtitle = $('dailySubtitle');
+    const dailyAttendanceDate = $('dailyAttendanceDate');
+    const dailyAllButton = $('dailyAllButton');
+    const unmarkedButton = $('unmarkedButton');
+    const unmarkedCount = $('unmarkedCount');
+    const refreshAttendanceButton = $('refreshAttendanceButton');
+    const dailyNotice = $('dailyNotice');
+    const dailyMessage = $('dailyMessage');
+    const dailyTableLoading = $('dailyTableLoading');
+    const dailyTableContainer = $('dailyTableContainer');
+    const dailyTableHead = $('dailyTableHead');
+    const dailyTableBody = $('dailyTableBody');
+    const dailyTableEmpty = $('dailyTableEmpty');
+
+
+    /*************************************************
+     * ELEMENTS — MONTHLY REPORT
+     *************************************************/
+
+    const monthSelector = $('monthSelector');
+    const monthlyRefreshButton = $('monthlyRefreshButton');
+    const monthlySectionTitle = $('monthlySectionTitle');
+    const monthlyTableLoading = $('monthlyTableLoading');
+    const monthlyTableContainer = $('monthlyTableContainer');
+    const monthlyTableBody = $('monthlyTableBody');
+    const monthlyTableEmpty = $('monthlyTableEmpty');
+
+
+    /*************************************************
+     * ELEMENTS — LATE REPORT
+     *************************************************/
+
+    const lateReportMonthSelector = $('lateReportMonthSelector');
+    const lateReportRefreshButton = $('lateReportRefreshButton');
+    const lateReportSectionTitle = $('lateReportSectionTitle');
+    const lateReportTableLoading = $('lateReportTableLoading');
+    const lateReportTableContainer = $('lateReportTableContainer');
+    const lateReportTableBody = $('lateReportTableBody');
+    const lateReportTableEmpty = $('lateReportTableEmpty');
+    const lateReportMessage = $('lateReportMessage');
+
+
+    /*************************************************
+     * ELEMENTS — MANAGE ATTENDANCE
+     *************************************************/
+
+    const attendanceDate = $('attendanceDate');
+    const attendanceEmployee = $('attendanceEmployee');
+    const attendanceStatus = $('attendanceStatus');
+    const attendanceNotes = $('attendanceNotes');
+    const attendanceSaveButton = $('attendanceSaveButton');
+    const attendanceMessage = $('attendanceMessage');
+
+
+    /*************************************************
+     * ELEMENTS — DEVICE REGISTRATION
+     *************************************************/
+
+    const registrationEmployee = $('registrationEmployee');
+    const generateRegistrationCodeButton = $('generateRegistrationCodeButton');
+    const registrationCodeResult = $('registrationCodeResult');
+    const registrationCodeValue = $('registrationCodeValue');
+    const registrationCodeExpiry = $('registrationCodeExpiry');
+    const registrationMessage = $('registrationMessage');
+
+
+    /*************************************************
+     * ELEMENTS — MONTHLY EXPORT
+     *************************************************/
+
+    const exportMonthlyButton = $('exportMonthlyButton');
+    const exportButtonLabel = $('exportButtonLabel');
+    const monthlyMessage = $('monthlyMessage');
+
+
+    /*************************************************
+     * ELEMENTS — HOLIDAY MAKER
+     *************************************************/
+
+    const holidayDate = $('holidayDate');
+    const holidayNote = $('holidayNote');
+    const holidayNoteField = $('holidayNoteField');
+    const holidayNoteLabel = $('holidayNoteLabel');
+    const holidayStatusBox = $('holidayStatusBox');
+    const holidayActionButton = $('holidayActionButton');
+    const holidayMessage = $('holidayMessage');
+    const holidayListTitle = $('holidayListTitle');
+    const holidayListLoading = $('holidayListLoading');
+    const holidayListContainer = $('holidayListContainer');
+    const holidayListBody = $('holidayListBody');
+    const holidayListEmpty = $('holidayListEmpty');
+
+
+    /*************************************************
+     * ELEMENTS — REVOKE DEVICE
+     *************************************************/
+
+    const revokeEmployeeSelect = $('revokeEmployee');
+    const revokeReason = $('revokeReason');
+    const revokeDeviceButton = $('revokeDeviceButton');
+    const revokeMessage = $('revokeMessage');
+
+
+    /*************************************************
+     * ELEMENTS — EMPLOYEES (ADD / REMOVE)
+     *************************************************/
+
+    const newEmployeeName = $('newEmployeeName');
+    const newEmployeeDepartment = $('newEmployeeDepartment');
+    const addEmployeeButton = $('addEmployeeButton');
+    const addEmployeeMessage = $('addEmployeeMessage');
+    const removeEmployeeSelect = $('removeEmployeeSelect');
+    const removeEmployeeButton = $('removeEmployeeButton');
+    const removeEmployeeMessage = $('removeEmployeeMessage');
+
+
+    /*************************************************
+     * STATE
+     *************************************************/
+
+    let dailyAttendanceData = null;
+    let dailyViewMode = 'all';          // 'all' | 'unmarked'
+    let currentMonthlyData = null;
+
+
+    /*************************************************
+     * MONTH HELPERS
+     *************************************************/
+
+    function getCurrentYearMonth() {
+
+      const now = new Date();
+
+      return {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1
+      };
+
+    }
+
+    function getSelectedYearMonth() {
+
+      const value = monthSelector.value;
+
+      if (value) {
+
+        const parts = value.split('-');
+
+        const year = Number(parts[0]);
+        const month = Number(parts[1]);
+
+        if (year && month) {
+          return { year: year, month: month };
+        }
+      }
+
+      return getCurrentYearMonth();
+
+    }
+
+    function formatMonthLabel(year, month) {
+
+      return new Date(year, month - 1, 1).toLocaleDateString('en-IN', {
+        month: 'long',
+        year: 'numeric'
+      });
+
+    }
+
+    function populateMonthSelector() {
+
+      const current = getCurrentYearMonth();
+
+      monthSelector.innerHTML = '';
+
+      // Current month + previous 11 months.
+      for (let offset = 0; offset < 12; offset++) {
+
+        const date = new Date(current.year, current.month - 1 - offset, 1);
+
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+
+        const option = document.createElement('option');
+
+        option.value = year + '-' + String(month).padStart(2, '0');
+        option.textContent = formatMonthLabel(year, month);
+
+        if (year === current.year && month === current.month) {
+          option.selected = true;
+        }
+
+        monthSelector.appendChild(option);
+
+      }
+
+    }
+
+    function populateLateReportMonthSelector() {
+
+      const current = getCurrentYearMonth();
+
+      lateReportMonthSelector.innerHTML = '';
+
+      // Current month + previous 11 months.
+      for (let offset = 0; offset < 12; offset++) {
+
+        const date = new Date(current.year, current.month - 1 - offset, 1);
+
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+
+        const option = document.createElement('option');
+
+        option.value = year + '-' + String(month).padStart(2, '0');
+        option.textContent = formatMonthLabel(year, month);
+
+        if (year === current.year && month === current.month) {
+          option.selected = true;
+        }
+
+        lateReportMonthSelector.appendChild(option);
+
+      }
+
+    }
+
+
+    /*************************************************
+     * DASHBOARD LOADING / ERRORS
+     *************************************************/
+
+    function setDashboardLoading(isLoading) {
+
+      if (isLoading) {
+
+        monthlyTableLoading.style.display = 'block';
+        monthlyTableEmpty.style.display = 'none';
+        dashboardError.style.display = 'none';
+
+      } else {
+
+        monthlyTableLoading.style.display = 'none';
+
+      }
+
+    }
+
+    function showDashboardError(message) {
+      dashboardError.textContent = message || 'Unable to load dashboard data.';
+      dashboardError.style.display = 'block';
+    }
+
+    function clearDashboardError() {
+      dashboardError.textContent = '';
+      dashboardError.style.display = 'none';
+    }
+
+    function handleDashboardSessionFailure(message) {
+
+      clearSession();
+
+      showLoginScreen();
+
+      showLoginError(
+        message ||
+        'Your admin session has expired. Please sign in again.'
+      );
+
+    }
+
+
+    /*************************************************
+     * LOAD DASHBOARD (today cards + monthly table)
+     *************************************************/
+
+    function loadDashboard(selectedYear, selectedMonth) {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        handleDashboardSessionFailure(
+          'Your admin session has expired. Please sign in again.'
+        );
+        return;
+      }
+
+      clearDashboardError();
+
+      setDashboardLoading(true);
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          setDashboardLoading(false);
+
+          if (!result || !result.success) {
+
+            if (result && result.reason) {
+              handleDashboardSessionFailure(result.reason);
+            } else {
+              showDashboardError('Unable to load dashboard data.');
+            }
+
+            return;
+          }
+
+          renderDashboard(result);
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          setDashboardLoading(false);
+
+          showDashboardError(
+            error && error.message
+              ? error.message
+              : 'Unable to load dashboard data.'
+          );
+
+        })
+
+        .getDashboardSummary(
+          session.sessionToken,
+          selectedYear,
+          selectedMonth
+        );
+
+    }
+
+    /*************************************************
+     * TODAY'S STATUS — donut chart, bar and legend
+     *************************************************/
+
+    function renderTodayBreakdown(today) {
+
+      const segments = [
+        { value: today.present,   color: '#22c55e', legend: 'legendPresent' },
+        { value: today.absent,    color: '#f43f5e', legend: 'legendAbsent' },
+        { value: today.wfh,       color: '#3b82f6', legend: 'legendWfh' },
+        { value: today.sickLeave, color: '#f59e0b', legend: 'legendSickLeave' },
+        { value: today.leave,     color: '#a78bfa', legend: 'legendLeave' },
+        { value: today.halfDay,   color: '#22d3ee', legend: 'legendHalfDay' },
+        { value: today.notMarked, color: '#cbd5e1', legend: 'legendNotMarked' }
+      ];
+
+      const counts = segments.map(function(segment) {
+        return Number(segment.value) || 0;
+      });
+
+      const sum = counts.reduce(function(total, count) {
+        return total + count;
+      }, 0);
+
+      const stops = [];
+
+      let position = 0;
+
+      segments.forEach(function(segment, index) {
+
+        const count = counts[index];
+
+        const percent = sum > 0 ? (count / sum) * 100 : 0;
+
+        $(segment.legend).textContent =
+          count + ' (' + Math.round(percent) + '%)';
+
+        if (count > 0) {
+
+          const end = index === segments.length - 1 ||
+            counts.slice(index + 1).every(function(rest) { return rest === 0; })
+              ? 100
+              : position + percent;
+
+          stops.push(segment.color + ' ' + position + '% ' + end + '%');
+
+          position = end;
+        }
+
+      });
+
+      const gradient = stops.length > 0
+        ? stops.join(', ')
+        : '#e2e8f0 0% 100%';
+
+      $('statusDonut').style.background = 'conic-gradient(' + gradient + ')';
+      $('statusBar').style.background = 'linear-gradient(to right, ' + gradient + ')';
+
+      $('donutTotal').textContent = today.totalEmployees ?? sum;
+
+      $('dashboardDateChip').textContent = formatDisplayDate(today.date);
+
+    }
+
+
+    function renderTodaySummary(today) {
+
+      if (!today) {
+        return;
+      }
+
+      statTotalEmployees.textContent = today.totalEmployees ?? '0';
+      statPresent.textContent = today.present ?? '0';
+      statAbsent.textContent = today.absent ?? '0';
+      statWfh.textContent = today.wfh ?? '0';
+      statSickLeave.textContent = today.sickLeave ?? '0';
+      statLeave.textContent = today.leave ?? '0';
+      statHalfDay.textContent = today.halfDay ?? '0';
+      statRegisteredDevices.textContent = today.registeredDevices ?? '0';
+
+      notMarkedBadge.textContent = 'Not Marked: ' + (today.notMarked ?? 0);
+
+      renderTodayBreakdown(today);
+
+      dashboardSubtitle.textContent =
+        "Today's attendance overview — " + formatDisplayDate(today.date);
+
+      if (today.isWorkingDay) {
+
+        todayStatusTitle.textContent = "Today's Status";
+
+        todayStatusSubtitle.textContent =
+          'Attendance status for ' + formatDisplayDate(today.date) + '.';
+
+      } else {
+
+        todayStatusTitle.textContent =
+          today.holidayName || 'Non-working Day';
+
+        todayStatusSubtitle.textContent =
+          'No attendance is expected today.';
+
+      }
+
+    }
+
+    function renderDashboard(data) {
+
+      if (!data || !data.success) {
+        return;
+      }
+
+      renderTodaySummary(data.today);
+
+      currentMonthlyData = data.monthly;
+
+      renderMonthlyTable(data.monthly);
+
+    }
+
+
+    /*************************************************
+     * MONTHLY REPORT TABLE
+     *************************************************/
+
+    function getAttendanceClass(percentage) {
+
+      if (percentage === null || percentage === undefined) {
+        return '';
+      }
+
+      if (percentage >= 80) {
+        return 'attendance-good';
+      }
+
+      if (percentage >= 60) {
+        return 'attendance-medium';
+      }
+
+      return 'attendance-low';
+
+    }
+
+    function renderMonthlyTable(monthly) {
+
+      if (!monthly) {
+        return;
+      }
+
+      currentMonthlyData = monthly;
+
+      monthlySectionTitle.textContent =
+        'Monthly Attendance — ' + monthly.monthLabel;
+
+      monthlyTableBody.innerHTML = '';
+
+      const employees = Array.isArray(monthly.employees)
+        ? monthly.employees.slice().sort(function(a, b) {
+            const nameA = (a.employeeName || '').toLowerCase();
+            const nameB = (b.employeeName || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+          })
+        : [];
+
+      monthlyTableLoading.style.display = 'none';
+
+      if (employees.length === 0) {
+        monthlyTableContainer.style.display = 'none';
+        monthlyTableEmpty.style.display = 'block';
+        return;
+      }
+
+      employees.forEach(function(employee) {
+
+        const row = document.createElement('tr');
+
+        const attendance = employee.attendancePercentage;
+
+        const attendanceDisplay =
+          attendance !== null && attendance !== undefined
+            ? attendance + '%'
+            : '—';
+
+        row.innerHTML =
+          '<td>' + employeeCellHtml(employee.employeeName, employee.employeeId) + '</td>' +
+          '<td>' + (employee.present ?? 0) + '</td>' +
+          '<td>' + (employee.wfh ?? 0) + '</td>' +
+          '<td>' + (employee.sickLeave ?? 0) + '</td>' +
+          '<td>' + (employee.leave ?? 0) + '</td>' +
+          '<td>' + (employee.halfDay ?? 0) + '</td>' +
+          '<td>' + (employee.absent ?? 0) + '</td>' +
+          '<td class="attendance-percentage ' + getAttendanceClass(attendance) + '">' +
+            '<span class="pct-pill">' + attendanceDisplay + '</span>' +
+          '</td>';
+
+        monthlyTableBody.appendChild(row);
+
+      });
+
+      monthlyTableContainer.style.display = 'block';
+      monthlyTableEmpty.style.display = 'none';
+
+    }
+
+    monthSelector.addEventListener('change', function() {
+
+      const value = monthSelector.value;
+
+      if (!value) {
+        return;
+      }
+
+      const selected = getSelectedYearMonth();
+
+      loadDashboard(selected.year, selected.month);
+
+    });
+
+    /*************************************************
+     * LATE REPORT
+     *************************************************/
+
+    let currentLateReportData = null;
+
+    function getLateReportSelectedYearMonth() {
+
+      const value = lateReportMonthSelector.value;
+
+      if (value) {
+
+        const parts = value.split('-');
+
+        const year = Number(parts[0]);
+        const month = Number(parts[1]);
+
+        if (year && month) {
+          return { year: year, month: month };
+        }
+      }
+
+      return getCurrentYearMonth();
+
+    }
+
+    function loadLateReport() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        handleDashboardSessionFailure(
+          'Your admin session has expired. Please sign in again.'
+        );
+        return;
+      }
+
+      const selected = getLateReportSelectedYearMonth();
+
+      clearMessage(lateReportMessage, 'inline-message');
+
+      lateReportTableLoading.style.display = 'block';
+      lateReportTableEmpty.style.display = 'none';
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          lateReportTableLoading.style.display = 'none';
+
+          if (!result || !result.success) {
+
+            if (result && result.reason) {
+              handleDashboardSessionFailure(result.reason);
+            } else {
+              setMessage(lateReportMessage, 'inline-message',
+                'Unable to load late report data.', 'error');
+            }
+
+            lateReportTableContainer.style.display = 'none';
+            lateReportTableEmpty.style.display = 'block';
+            return;
+          }
+
+          renderLateReportTable(result);
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          lateReportTableLoading.style.display = 'none';
+
+          setMessage(lateReportMessage, 'inline-message',
+            error && error.message
+              ? error.message
+              : 'Unable to load late report data.', 'error');
+
+          lateReportTableContainer.style.display = 'none';
+          lateReportTableEmpty.style.display = 'block';
+
+        })
+
+        .getLateReportData(
+          session.sessionToken,
+          selected.year,
+          selected.month
+        );
+
+    }
+
+    function renderLateReportTable(data) {
+
+      if (!data) {
+        return;
+      }
+
+      currentLateReportData = data;
+
+      lateReportSectionTitle.textContent =
+        'Late Report — ' + data.monthLabel;
+
+      lateReportTableBody.innerHTML = '';
+
+      const employees = Array.isArray(data.employees)
+        ? data.employees
+        : [];
+
+      lateReportTableLoading.style.display = 'none';
+
+      if (employees.length === 0) {
+        lateReportTableContainer.style.display = 'none';
+        lateReportTableEmpty.style.display = 'block';
+        return;
+      }
+
+      employees.forEach(function(employee) {
+
+        const row = document.createElement('tr');
+
+        const workingDays = employee.workingDays || 0;
+        const onTime = employee.onTime || 0;
+        const late1030to1100 = employee.late1030to1100 || 0;
+        const lateAfter1100 = employee.lateAfter1100 || 0;
+        const markedByAdmin = employee.markedByAdmin || 0;
+
+        // Format as "X / Y" (count / working days)
+        const onTimeDisplay = workingDays > 0 ? onTime + ' / ' + workingDays : '—';
+        const late1030Display = workingDays > 0 ? late1030to1100 + ' / ' + workingDays : '—';
+        const lateAfterDisplay = workingDays > 0 ? lateAfter1100 + ' / ' + workingDays : '—';
+        const markedByAdminDisplay = workingDays > 0 ? markedByAdmin + ' / ' + workingDays : '—';
+
+        row.innerHTML =
+          '<td>' + employeeCellHtml(employee.employeeName, employee.employeeId) + '</td>' +
+          '<td style="text-align: center;">' + workingDays + '</td>' +
+          '<td style="text-align: center;">' + onTimeDisplay + '</td>' +
+          '<td style="text-align: center;">' + late1030Display + '</td>' +
+          '<td style="text-align: center;">' + lateAfterDisplay + '</td>' +
+          '<td style="text-align: center;">' + markedByAdminDisplay + '</td>';
+
+        lateReportTableBody.appendChild(row);
+
+      });
+
+      lateReportTableContainer.style.display = 'block';
+      lateReportTableEmpty.style.display = 'none';
+
+    }
+
+    lateReportMonthSelector.addEventListener('change', function() {
+
+      const value = lateReportMonthSelector.value;
+
+      if (!value) {
+        return;
+      }
+
+      clearMessage(lateReportMessage, 'inline-message');
+
+      loadLateReport();
+
+    });
+
+    lateReportRefreshButton.addEventListener('click', function() {
+
+      lateReportRefreshButton.disabled = true;
+      lateReportRefreshButton.textContent = 'Refreshing…';
+
+      loadLateReport();
+
+      window.setTimeout(function() {
+        lateReportRefreshButton.disabled = false;
+        lateReportRefreshButton.textContent = 'Refresh';
+      }, 1200);
+
+    });
+
+
+    /*************************************************
+     * REFRESH
+     *************************************************/
+
+    function refreshAll(button) {
+
+      const selected = getSelectedYearMonth();
+
+      button.disabled = true;
+      button.textContent = 'Refreshing…';
+
+      loadDashboard(selected.year, selected.month);
+      loadDailyAttendance(dailyAttendanceDate.value);
+
+      window.setTimeout(function() {
+        button.disabled = false;
+        button.textContent = 'Refresh';
+      }, 1200);
+
+    }
+
+    refreshAttendanceButton.addEventListener('click', function() {
+      refreshAll(refreshAttendanceButton);
+    });
+
+    monthlyRefreshButton.addEventListener('click', function() {
+      refreshAll(monthlyRefreshButton);
+    });
+
+
+    /*************************************************
+     * DAILY ATTENDANCE (Today's Status tab)
+     *************************************************/
+
+    function showDailyMessage(message, type) {
+      dailyMessage.textContent = message || '';
+      dailyMessage.className = 'inline-message ' + (type || 'error');
+    }
+
+    function clearDailyMessage() {
+      dailyMessage.textContent = '';
+      dailyMessage.className = 'inline-message';
+    }
+
+    function setDailyLoading(isLoading) {
+
+      dailyTableLoading.style.display = isLoading ? 'block' : 'none';
+
+      if (isLoading) {
+        dailyTableContainer.style.display = 'none';
+        dailyTableEmpty.style.display = 'none';
+      }
+
+    }
+
+    function updateUnmarkedBadge() {
+
+      const count = dailyAttendanceData
+        ? Number(dailyAttendanceData.unmarkedCount || 0)
+        : 0;
+
+      if (count > 0) {
+        tabUnmarkedBadge.textContent = count;
+        tabUnmarkedBadge.style.display = 'inline-flex';
+      } else {
+        tabUnmarkedBadge.style.display = 'none';
+      }
+
+    }
+
+    function loadDailyAttendance(dateKey) {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        return;
+      }
+
+      if (!dateKey) {
+        dailyAttendanceData = null;
+        unmarkedCount.textContent = '—';
+        updateUnmarkedBadge();
+        return;
+      }
+
+      unmarkedButton.disabled = true;
+      dailyAllButton.disabled = true;
+      unmarkedCount.textContent = '…';
+
+      clearDailyMessage();
+      setDailyLoading(true);
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          unmarkedButton.disabled = false;
+          dailyAllButton.disabled = false;
+
+          setDailyLoading(false);
+
+          if (!result || !result.success) {
+
+            dailyAttendanceData = null;
+            unmarkedCount.textContent = '—';
+            updateUnmarkedBadge();
+
+            showDailyMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to load attendance for the selected date.',
+              'error'
+            );
+
+            return;
+          }
+
+          dailyAttendanceData = result;
+
+          unmarkedCount.textContent = result.unmarkedCount ?? 0;
+
+          updateUnmarkedBadge();
+
+          renderDaily();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          unmarkedButton.disabled = false;
+          dailyAllButton.disabled = false;
+
+          setDailyLoading(false);
+
+          dailyAttendanceData = null;
+          unmarkedCount.textContent = '—';
+          updateUnmarkedBadge();
+
+          showDailyMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to load attendance for the selected date.',
+            'error'
+          );
+
+        })
+
+        .getDailyAttendanceForAdmin(
+          session.sessionToken,
+          dateKey
+        );
+
+    }
+
+    function renderDaily() {
+
+      const data = dailyAttendanceData;
+
+      if (!data) {
+        return;
+      }
+
+      const unmarkedMode = dailyViewMode === 'unmarked';
+
+      dailyAllButton.classList.toggle('is-active', !unmarkedMode);
+      unmarkedButton.classList.toggle('is-active', unmarkedMode);
+
+      const isToday = data.date === getTodayDateInputValue();
+
+      dailyTitle.textContent =
+        (
+          unmarkedMode
+            ? 'Unmarked Employees'
+            : (isToday ? "Today's Status" : 'Attendance')
+        ) +
+        ' — ' +
+        formatDisplayDate(data.date);
+
+      dailySubtitle.textContent =
+        (data.markedCount ?? 0) +
+        ' of ' +
+        (data.totalEmployees ?? 0) +
+        ' employees marked.';
+
+      if (data.isWorkingDay === false) {
+
+        dailyNotice.textContent =
+          (data.holidayName || data.dayType || 'Non-working day') +
+          ' — no attendance is expected on this date.';
+
+        dailyNotice.style.display = 'block';
+
+      } else {
+
+        dailyNotice.style.display = 'none';
+
+      }
+
+      // Always show employees in alphabetical order by name.
+      const list = (
+        unmarkedMode
+          ? (data.unmarkedEmployees || [])
+          : (data.records || [])
+      ).slice().sort(function(a, b) {
+        return String(a.employeeName || '').localeCompare(
+          String(b.employeeName || ''),
+          'en-IN',
+          { sensitivity: 'base' }
+        );
+      });
+
+      dailyTableBody.innerHTML = '';
+
+      if (list.length === 0) {
+
+        dailyTableContainer.style.display = 'none';
+
+        dailyTableEmpty.textContent = unmarkedMode
+          ? 'All employees have marked attendance for this date.'
+          : 'No employees found.';
+
+        dailyTableEmpty.style.display = 'block';
+
+        return;
+      }
+
+      if (unmarkedMode) {
+
+        dailyTableHead.innerHTML =
+          '<tr>' +
+            '<th>Employee</th>' +
+            '<th>Department</th>' +
+            '<th>Status</th>' +
+            '<th>Action</th>' +
+          '</tr>';
+
+        list.forEach(function(employee) {
+
+          const row = document.createElement('tr');
+
+          row.innerHTML =
+            '<td>' + employeeCellHtml(employee.employeeName, employee.employeeId) + '</td>' +
+            '<td>' + escapeHtml(employee.department || '—') + '</td>' +
+            '<td>' + statusPillHtml('Not Marked') + '</td>' +
+            '<td>' +
+              '<select class="unmarked-status-select"' +
+                ' data-employee-id="' + escapeHtml(employee.employeeId) + '"' +
+                ' aria-label="Mark attendance for ' + escapeHtml(employee.employeeName) + '">' +
+                '<option value="">Mark Attendance</option>' +
+                '<option value="Present">Present</option>' +
+                '<option value="WFH">WFH</option>' +
+                '<option value="Sick Leave">Sick Leave</option>' +
+                '<option value="Leave">Approved Leave</option>' +
+                '<option value="Half Day">Half Day</option>' +
+                '<option value="Absent">Absent</option>' +
+              '</select>' +
+            '</td>';
+
+          dailyTableBody.appendChild(row);
+
+        });
+
+        dailyTableBody
+          .querySelectorAll('.unmarked-status-select')
+          .forEach(function(select) {
+
+            select.addEventListener('change', function() {
+
+              const employeeId = select.dataset.employeeId;
+              const status = select.value;
+
+              if (!employeeId || !status) {
+                return;
+              }
+
+              markUnmarkedEmployee(employeeId, status, select);
+
+            });
+
+          });
+
+      } else {
+
+        dailyTableHead.innerHTML =
+          '<tr>' +
+            '<th>Employee</th>' +
+            '<th>Department</th>' +
+            '<th>Status</th>' +
+            '<th>Check-in</th>' +
+            '<th>Marked By</th>' +
+            '<th>Notes</th>' +
+          '</tr>';
+
+        list.forEach(function(record) {
+
+          const row = document.createElement('tr');
+
+          row.innerHTML =
+            '<td>' + employeeCellHtml(record.employeeName, record.employeeId) + '</td>' +
+            '<td>' + escapeHtml(record.department || '—') + '</td>' +
+            '<td>' + statusPillHtml(record.status) + '</td>' +
+            '<td>' + escapeHtml(record.checkInTime || '—') + '</td>' +
+            '<td>' + escapeHtml(record.markedBy || '—') + '</td>' +
+            '<td class="note-cell" title="' + escapeHtml(record.notes || '') + '">' +
+              escapeHtml(record.notes || '—') +
+            '</td>';
+
+          dailyTableBody.appendChild(row);
+
+        });
+
+      }
+
+      dailyTableContainer.style.display = 'block';
+      dailyTableEmpty.style.display = 'none';
+
+    }
+
+    // Keeps the local copy of the day's data in step with what was just saved,
+    // so switching between "All Employees" and "Unmarked" stays consistent
+    // without forcing a reload.
+    function applyLocalMark(employeeId, finalStatus) {
+
+      const data = dailyAttendanceData;
+
+      if (!data) {
+        return;
+      }
+
+      const session = getSavedSession();
+
+      (data.records || []).forEach(function(record) {
+
+        if (record.employeeId === employeeId) {
+          record.status = finalStatus;
+          record.isMarked = true;
+          record.markedBy = session && session.adminId
+            ? session.adminId
+            : record.markedBy;
+        }
+
+      });
+
+      data.unmarkedEmployees = (data.unmarkedEmployees || []).filter(
+        function(employee) {
+          return employee.employeeId !== employeeId;
+        }
+      );
+
+      data.unmarkedCount = data.unmarkedEmployees.length;
+      data.markedCount = (data.totalEmployees ?? 0) - data.unmarkedCount;
+
+      unmarkedCount.textContent = data.unmarkedCount;
+
+      updateUnmarkedBadge();
+
+    }
+
+    function markUnmarkedEmployee(employeeId, status, selectElement) {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+
+        selectElement.value = '';
+
+        handleDashboardSessionFailure(
+          'Your admin session has expired. Please sign in again.'
+        );
+
+        return;
+      }
+
+      const dateKey = dailyAttendanceDate.value.trim();
+
+      if (!dateKey) {
+        selectElement.value = '';
+        showDailyMessage('Please select a date.', 'error');
+        return;
+      }
+
+      selectElement.disabled = true;
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          if (!result || !result.success) {
+
+            selectElement.disabled = false;
+            selectElement.value = '';
+
+            showDailyMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to save attendance.',
+              'error'
+            );
+
+            return;
+          }
+
+          let message = result.message || 'Attendance saved successfully.';
+
+          if (result.converted) {
+            message += ' ' + (
+              result.reason || 'Sick Leave was recorded as Leave.'
+            );
+          }
+
+          const finalStatus = result.status || status;
+
+          // Show the saved status in the row straight away.
+          const row = selectElement.closest('tr');
+
+          if (row && row.children[2]) {
+            row.children[2].innerHTML = statusPillHtml(finalStatus);
+          }
+
+          selectElement.disabled = true;
+          selectElement.title = 'Saved. Press Refresh to update the dashboard.';
+
+          applyLocalMark(employeeId, finalStatus);
+
+          showDailyMessage(
+            message + ' Press Refresh when you have finished marking attendance.',
+            'success'
+          );
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          selectElement.disabled = false;
+          selectElement.value = '';
+
+          showDailyMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to save attendance.',
+            'error'
+          );
+
+        })
+
+        .adminSetAttendanceStatus(
+          session.sessionToken,
+          employeeId,
+          dateKey,
+          status,
+          ''
+        );
+
+    }
+
+    dailyAllButton.addEventListener('click', function() {
+
+      dailyViewMode = 'all';
+
+      if (dailyAttendanceData) {
+        renderDaily();
+        return;
+      }
+
+      loadDailyAttendance(dailyAttendanceDate.value);
+
+    });
+
+    unmarkedButton.addEventListener('click', function() {
+
+      dailyViewMode = 'unmarked';
+
+      if (dailyAttendanceData) {
+        renderDaily();
+        return;
+      }
+
+      loadDailyAttendance(dailyAttendanceDate.value);
+
+    });
+
+    dailyAttendanceDate.addEventListener('change', function() {
+      loadDailyAttendance(dailyAttendanceDate.value);
+    });
+
+
+    /*************************************************
+     * MANAGE ATTENDANCE TAB
+     *************************************************/
+
+    function initializeAttendanceForm() {
+
+      dailyViewMode = 'all';
+
+      attendanceDate.value = getTodayDateInputValue();
+      dailyAttendanceDate.value = getTodayDateInputValue();
+
+      loadEmployeeLists();
+
+      loadDailyAttendance(dailyAttendanceDate.value);
+
+    }
+
+    function showAttendanceMessage(message, type) {
+      attendanceMessage.textContent = message;
+      attendanceMessage.className = 'attendance-message ' + type;
+    }
+
+    function clearAttendanceMessage() {
+      attendanceMessage.textContent = '';
+      attendanceMessage.className = 'attendance-message';
+    }
+
+    function showAttendanceRecordStatus(message) {
+      attendanceMessage.textContent = message;
+      attendanceMessage.className = 'attendance-message success';
+    }
+
+    function saveAttendance() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showAttendanceMessage(
+          'Your admin session has expired. Please log in again.',
+          'error'
+        );
+        return;
+      }
+
+      const dateKey = attendanceDate.value.trim();
+      const employeeId = attendanceEmployee.value.trim();
+      const status = attendanceStatus.value.trim();
+      const notes = attendanceNotes.value.trim();
+
+      if (!dateKey) {
+        showAttendanceMessage('Please select a date.', 'error');
+        return;
+      }
+
+      if (!employeeId) {
+        showAttendanceMessage('Please select an employee.', 'error');
+        return;
+      }
+
+      if (!status) {
+        showAttendanceMessage('Please select an attendance status.', 'error');
+        return;
+      }
+
+      attendanceSaveButton.disabled = true;
+      attendanceSaveButton.textContent = 'Saving…';
+
+      clearAttendanceMessage();
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          attendanceSaveButton.disabled = false;
+          attendanceSaveButton.textContent = 'Save Attendance';
+
+          if (!result || !result.success) {
+            showAttendanceMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to save attendance.',
+              'error'
+            );
+            return;
+          }
+
+          let message = result.message || 'Attendance saved successfully.';
+
+          if (result.converted) {
+            message += ' ' + (
+              result.reason || 'Sick Leave was recorded as Leave.'
+            );
+          }
+
+          showAttendanceMessage(message, 'success');
+
+          attendanceStatus.value = '';
+          attendanceNotes.value = '';
+
+          // Keep every tab up to date with the change.
+          const selected = getSelectedYearMonth();
+
+          loadDashboard(selected.year, selected.month);
+          loadDailyAttendance(dailyAttendanceDate.value);
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          attendanceSaveButton.disabled = false;
+          attendanceSaveButton.textContent = 'Save Attendance';
+
+          showAttendanceMessage(
+            error && error.message
+              ? error.message
+              : 'An unexpected error occurred while saving attendance.',
+            'error'
+          );
+
+        })
+
+        .adminSetAttendanceStatus(
+          session.sessionToken,
+          employeeId,
+          dateKey,
+          status,
+          notes
+        );
+
+    }
+
+    function checkExistingAttendanceRecord() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        return;
+      }
+
+      const dateKey = attendanceDate.value.trim();
+      const employeeId = attendanceEmployee.value.trim();
+
+      // Nothing to check until both fields are selected.
+      if (!dateKey || !employeeId) {
+
+        clearAttendanceMessage();
+
+        attendanceStatus.value = '';
+        attendanceNotes.value = '';
+
+        attendanceSaveButton.textContent = 'Save Attendance';
+
+        return;
+      }
+
+      attendanceStatus.disabled = true;
+      attendanceNotes.disabled = true;
+      attendanceSaveButton.disabled = true;
+
+      attendanceStatus.innerHTML = '<option value="">Checking record…</option>';
+
+      clearAttendanceMessage();
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          attendanceStatus.disabled = false;
+          attendanceNotes.disabled = false;
+          attendanceSaveButton.disabled = false;
+
+          if (!result || !result.success) {
+
+            attendanceStatus.innerHTML = '<option value="">Select Status</option>';
+
+            attendanceSaveButton.textContent = 'Save Attendance';
+
+            showAttendanceMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to check existing attendance.',
+              'error'
+            );
+
+            return;
+          }
+
+          attendanceStatus.innerHTML =
+            '<option value="">Select Status</option>' +
+            '<option value="Present">Present</option>' +
+            '<option value="WFH">WFH</option>' +
+            '<option value="Sick Leave">Sick Leave</option>' +
+            '<option value="Leave">Approved Leave</option>' +
+            '<option value="Half Day">Half Day</option>' +
+            '<option value="Absent">Absent</option>';
+
+          if (result.exists && result.record) {
+
+            attendanceStatus.value = result.record.status || '';
+            attendanceNotes.value = result.record.notes || '';
+
+            attendanceSaveButton.textContent = 'Update Attendance';
+
+            showAttendanceRecordStatus(
+              'Existing record: ' + (result.record.status || 'Recorded')
+            );
+
+          } else {
+
+            attendanceStatus.value = '';
+            attendanceNotes.value = '';
+
+            attendanceSaveButton.textContent = 'Save Attendance';
+
+            clearAttendanceMessage();
+
+          }
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          attendanceStatus.disabled = false;
+          attendanceNotes.disabled = false;
+          attendanceSaveButton.disabled = false;
+
+          attendanceSaveButton.textContent = 'Save Attendance';
+
+          showAttendanceMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to check existing attendance.',
+            'error'
+          );
+
+        })
+
+        .getAttendanceRecordForAdmin(
+          session.sessionToken,
+          employeeId,
+          dateKey
+        );
+
+    }
+
+    attendanceDate.addEventListener('change', checkExistingAttendanceRecord);
+    attendanceEmployee.addEventListener('change', checkExistingAttendanceRecord);
+    attendanceSaveButton.addEventListener('click', saveAttendance);
+
+
+    /*************************************************
+     * DEVICE REGISTRATION TAB
+     *************************************************/
+
+    function showRegistrationMessage(message, type) {
+      registrationMessage.textContent = message || '';
+      registrationMessage.className = 'registration-message ' + (type || 'error');
+    }
+
+    function clearRegistrationMessage() {
+      registrationMessage.textContent = '';
+      registrationMessage.className = 'registration-message';
+    }
+
+    function generateRegistrationCodeForEmployee() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showRegistrationMessage(
+          'Your admin session has expired. Please log in again.',
+          'error'
+        );
+        return;
+      }
+
+      const employeeId = registrationEmployee.value.trim();
+
+      if (!employeeId) {
+        showRegistrationMessage('Please select an employee.', 'error');
+        return;
+      }
+
+      registrationCodeResult.style.display = 'none';
+
+      clearRegistrationMessage();
+
+      generateRegistrationCodeButton.disabled = true;
+      generateRegistrationCodeButton.textContent = 'Generating…';
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          generateRegistrationCodeButton.disabled = false;
+          generateRegistrationCodeButton.textContent = 'Generate Registration Code';
+
+          if (!result || !result.success) {
+            showRegistrationMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to generate registration code.',
+              'error'
+            );
+            return;
+          }
+
+          registrationCodeValue.textContent = result.code || '—';
+
+          let expiryText = 'Expires in 10 minutes.';
+
+          if (result.expiresAt) {
+
+            const expiryDate = new Date(result.expiresAt);
+
+            if (!isNaN(expiryDate.getTime())) {
+              expiryText =
+                'Expires at ' +
+                expiryDate.toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                });
+            }
+
+          }
+
+          registrationCodeExpiry.textContent = expiryText;
+
+          registrationCodeResult.style.display = 'block';
+
+          showRegistrationMessage(
+            'Registration code generated successfully.',
+            'success'
+          );
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          generateRegistrationCodeButton.disabled = false;
+          generateRegistrationCodeButton.textContent = 'Generate Registration Code';
+
+          console.error('Registration code generation failed:', error);
+
+          showRegistrationMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to generate registration code.',
+            'error'
+          );
+
+        })
+
+        .createRegistrationCode(
+          session.sessionToken,
+          employeeId
+        );
+
+    }
+
+    // Attached once here (not on every login) so one click = one code.
+    generateRegistrationCodeButton.addEventListener(
+      'click',
+      generateRegistrationCodeForEmployee
+    );
+
+
+    /*************************************************
+     * SHARED HELPERS (NEW TABS)
+     *************************************************/
+
+    function setMessage(element, baseClass, message, type) {
+
+      element.textContent = message || '';
+
+      element.className =
+        baseClass + (message ? ' ' + (type || 'error') : '');
+
+    }
+
+    function clearMessage(element, baseClass) {
+
+      element.textContent = '';
+      element.className = baseClass;
+
+    }
+
+    // Reloads the dashboard cards, monthly table and daily list.
+    function refreshDashboardData() {
+
+      const selected = getSelectedYearMonth();
+
+      loadDashboard(selected.year, selected.month);
+
+      loadDailyAttendance(dailyAttendanceDate.value);
+
+    }
+
+    // Two-step button: the first click arms it, the second click
+    // (within 5 seconds) runs the action.
+    function setupConfirmButton(button, idleLabel, confirmLabel, canArm, action) {
+
+      let timer = null;
+
+      function disarm() {
+
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+
+        button.dataset.armed = 'false';
+        button.classList.remove('is-armed');
+
+        if (!button.disabled) {
+          button.textContent = idleLabel;
+        }
+
+      }
+
+      button.addEventListener('click', function() {
+
+        if (button.dataset.armed === 'true') {
+          disarm();
+          action();
+          return;
+        }
+
+        if (canArm && !canArm()) {
+          return;
+        }
+
+        button.dataset.armed = 'true';
+        button.classList.add('is-armed');
+        button.textContent = confirmLabel;
+
+        timer = setTimeout(disarm, 5000);
+
+      });
+
+      return disarm;
+
+    }
+
+
+    /*************************************************
+     * EMPLOYEE DROPDOWNS (Manage Attendance,
+     * Device Registration, Remove Employee)
+     *************************************************/
+
+    function loadEmployeeLists() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        return;
+      }
+
+      const selects = [
+        attendanceEmployee,
+        registrationEmployee,
+        removeEmployeeSelect
+      ];
+
+      selects.forEach(function(select) {
+        select.innerHTML = '<option value="">Loading employees…</option>';
+        select.disabled = true;
+      });
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          if (!result || !result.success) {
+
+            selects.forEach(function(select) {
+              select.innerHTML = '<option value="">Unable to load employees</option>';
+              select.disabled = false;
+            });
+
+            return;
+          }
+
+          const employees = result.employees || [];
+
+          selects.forEach(function(select) {
+
+            if (employees.length === 0) {
+              select.innerHTML = '<option value="">No active employees found</option>';
+              select.disabled = true;
+              return;
+            }
+
+            select.innerHTML = '<option value="">Select Employee</option>';
+
+            employees.forEach(function(employee) {
+
+              const option = document.createElement('option');
+
+              option.value = employee.employeeId;
+              option.textContent = employee.employeeName + ' — ' + employee.employeeId;
+
+              select.appendChild(option);
+
+            });
+
+            select.disabled = false;
+
+          });
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          console.error('Unable to load employees:', error);
+
+          selects.forEach(function(select) {
+            select.innerHTML = '<option value="">Unable to load employees</option>';
+            select.disabled = false;
+          });
+
+        })
+
+        .getActiveEmployeesForAdmin(session.sessionToken);
+
+    }
+
+
+    /*************************************************
+     * MONTHLY REPORT — EXPORT TO EXCEL (.xlsx)
+     *
+     * Rows = employees, columns = dates of the selected
+     * month, cells = attendance status (blank if unmarked).
+     *************************************************/
+
+    function getCountedRanges(counted, rowIndex, firstCol) {
+
+      // Groups the counted (working-day) columns of one row into
+      // contiguous Excel ranges, e.g. ["C2:H2", "J2:O2"].
+      const ranges = [];
+
+      let start = -1;
+
+      for (let i = 0; i <= counted.length; i++) {
+
+        const isOn = i < counted.length && counted[i];
+
+        if (isOn && start === -1) {
+          start = i;
+        }
+
+        if (!isOn && start !== -1) {
+
+          ranges.push(
+            XLSX.utils.encode_cell({ r: rowIndex, c: firstCol + start }) +
+            ':' +
+            XLSX.utils.encode_cell({ r: rowIndex, c: firstCol + i - 1 })
+          );
+
+          start = -1;
+        }
+      }
+
+      return ranges;
+
+    }
+
+    function countStatusFormula(ranges, status) {
+
+      if (ranges.length === 0) {
+        return '0';
+      }
+
+      return ranges.map(function(range) {
+        return 'COUNTIF(' + range + ',"' + status + '")';
+      }).join('+');
+
+    }
+
+    function buildAndDownloadWorkbook(result) {
+
+      const monthShort = new Date(result.year, result.month - 1, 1)
+        .toLocaleDateString('en-GB', { month: 'short' });
+
+      const dateCount = result.dates.length;
+
+      const firstDateCol = 2;
+      const workingDaysCol = firstDateCol + dateCount;
+      const percentCol = workingDaysCol + 1;
+      const totalCols = percentCol + 1;
+
+      const header = ['Employee Name', 'Employee ID'];
+
+      result.dates.forEach(function(item) {
+
+        header.push(
+          String(item.day).padStart(2, '0') + ' ' +
+          monthShort + ' ' +
+          item.weekday +
+          (item.isWorkingDay ? '' : ' – Holiday')
+        );
+
+      });
+
+      header.push('Working Days');
+      header.push('Attendance %');
+
+      const rows = [header];
+
+      const percentCells = [];
+
+      result.employees.forEach(function(employee, index) {
+
+        const rowIndex = index + 1;       // header is row 0
+
+        const statuses = employee.statuses.map(function(status) {
+          return status ? status : null;      // blank when unmarked
+        });
+
+        const counted = employee.countedDates || [];
+        const workingDays = Number(employee.workingDays) || 0;
+
+        // Value shown before Excel recalculates (same rule as the dashboard).
+        let present = 0;
+        let wfh = 0;
+        let sick = 0;
+        let half = 0;
+
+        employee.statuses.forEach(function(status, i) {
+
+          if (!counted[i]) {
+            return;
+          }
+
+          const value = String(status || '').trim().toLowerCase();
+
+          if (value === 'present') { present++; }
+          else if (value === 'wfh') { wfh++; }
+          else if (value === 'sick leave') { sick++; }
+          else if (value === 'half day') { half++; }
+
+        });
+
+        const equivalent = present + wfh + Math.min(sick, 2) + 0.5 * half;
+
+        // Live Excel formula: edit any status in the sheet and this updates.
+        //   (Present + WFH + first 2 Sick Leaves + 0.5 x Half Day) / Working Days
+        // Leave, Absent, blank and non-working days count as 0 / are skipped.
+        const ranges = getCountedRanges(counted, rowIndex, firstDateCol);
+
+        const workingDaysRef =
+          XLSX.utils.encode_cell({ r: rowIndex, c: workingDaysCol });
+
+        const formula =
+          'IF(' + workingDaysRef + '>0,' +
+          'ROUND((' +
+            '(' + countStatusFormula(ranges, 'Present') + ')+' +
+            '(' + countStatusFormula(ranges, 'WFH') + ')+' +
+            'MIN(' + countStatusFormula(ranges, 'Sick Leave') + ',2)+' +
+            '0.5*(' + countStatusFormula(ranges, 'Half Day') + ')' +
+          ')/' + workingDaysRef + ',3),"—")';
+
+        const percentCell = workingDays > 0
+          ? {
+              t: 'n',
+              v: Math.round(equivalent / workingDays * 1000) / 1000,
+              f: formula,
+              z: '0.0%'
+            }
+          : { t: 's', v: '—', f: formula };
+
+        percentCells.push({ rowIndex: rowIndex, cell: percentCell });
+
+        rows.push(
+          [employee.employeeName, employee.employeeId]
+            .concat(statuses, [workingDays, null])
+        );
+
+      });
+
+      const sheet = XLSX.utils.aoa_to_sheet(rows);
+
+      percentCells.forEach(function(item) {
+
+        sheet[XLSX.utils.encode_cell({ r: item.rowIndex, c: percentCol })] =
+          item.cell;
+
+      });
+
+      // Explanatory note under the table.
+      const noteRow = rows.length + 1;
+
+      XLSX.utils.sheet_add_aoa(
+        sheet,
+        [[
+          'Attendance % = (Present + WFH + first 2 Sick Leaves + 0.5 × Half Day) ÷ Working Days. ' +
+          'Leave, Absent and blank days count as 0. Edit any status above and the percentage updates.'
+        ]],
+        { origin: { r: noteRow, c: 0 } }
+      );
+
+      sheet['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: noteRow, c: totalCols - 1 }
+      });
+
+      const columns = [{ wch: 28 }, { wch: 12 }];
+
+      result.dates.forEach(function() {
+        columns.push({ wch: 16 });
+      });
+
+      columns.push({ wch: 14 });
+      columns.push({ wch: 16 });
+
+      sheet['!cols'] = columns;
+
+      const workbook = XLSX.utils.book_new();
+
+      XLSX.utils.book_append_sheet(workbook, sheet, 'Attendance');
+
+      XLSX.writeFile(
+        workbook,
+        'Attendance_' + String(result.monthLabel).replace(/\s+/g, '_') + '.xlsx'
+      );
+
+    }
+
+    function exportMonthlyAttendance() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        setMessage(monthlyMessage, 'inline-message',
+          'Your admin session has expired. Please log in again.', 'error');
+        return;
+      }
+
+      if (typeof XLSX === 'undefined') {
+        setMessage(monthlyMessage, 'inline-message',
+          'The Excel library could not be loaded. Check your internet connection and reload the page.',
+          'error');
+        return;
+      }
+
+      const selected = getSelectedYearMonth();
+
+      clearMessage(monthlyMessage, 'inline-message');
+
+      exportMonthlyButton.disabled = true;
+      exportButtonLabel.textContent = 'Preparing…';
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          exportMonthlyButton.disabled = false;
+          exportButtonLabel.textContent = 'Export';
+
+          if (!result || !result.success) {
+            setMessage(monthlyMessage, 'inline-message',
+              result && result.reason
+                ? result.reason
+                : 'Unable to export attendance.',
+              'error');
+            return;
+          }
+
+          try {
+
+            buildAndDownloadWorkbook(result);
+
+            setMessage(monthlyMessage, 'inline-message',
+              'Exported ' + result.monthLabel + ' attendance to Excel.', 'success');
+
+          } catch (error) {
+
+            console.error('Excel export failed:', error);
+
+            setMessage(monthlyMessage, 'inline-message',
+              'Unable to create the Excel file. ' +
+              (error && error.message ? error.message : ''),
+              'error');
+
+          }
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          exportMonthlyButton.disabled = false;
+          exportButtonLabel.textContent = 'Export';
+
+          setMessage(monthlyMessage, 'inline-message',
+            error && error.message
+              ? error.message
+              : 'Unable to export attendance.',
+            'error');
+
+        })
+
+        .getMonthlyExportData(
+          session.sessionToken,
+          selected.year,
+          selected.month
+        );
+
+    }
+
+    exportMonthlyButton.addEventListener('click', exportMonthlyAttendance);
+
+    monthSelector.addEventListener('change', function() {
+      clearMessage(monthlyMessage, 'inline-message');
+    });
+
+
+    /*************************************************
+     * HOLIDAY MAKER
+     *************************************************/
+
+    let holidayState = null;
+    let holidayListYear = null;
+
+    function showHolidayMessage(message, type) {
+      setMessage(holidayMessage, 'registration-message', message, type);
+    }
+
+    function renderHolidayStatus() {
+
+      const status = holidayState;
+
+      if (!status) {
+
+        holidayStatusBox.className = 'holiday-status';
+        holidayStatusBox.textContent = 'Select a date to see its status.';
+
+        holidayNoteField.style.display = 'none';
+
+        holidayActionButton.disabled = true;
+
+        return;
+      }
+
+      let tone = '';
+      let title = '';
+      let detail = '';
+      let noteMode = 'none';
+      let label = 'Mark as Holiday';
+      let isSecondary = false;
+
+      const dayText = status.weekday + ', ' + formatDisplayDate(status.date);
+
+      if (status.state === 'declared-holiday') {
+
+        tone = 'is-holiday';
+        title = 'Holiday — ' + (status.holidayName || 'Marked holiday');
+        detail = dayText + '. Employees cannot mark attendance on this day.';
+        label = 'Unmark as Holiday';
+        isSecondary = true;
+
+      } else if (status.state === 'sunday-holiday') {
+
+        tone = 'is-holiday';
+        title = 'Sunday — weekly holiday';
+        detail = dayText + '. Unmark it if employees need to come in and mark attendance on this Sunday.';
+        noteMode = 'optional';
+        label = 'Unmark as Holiday';
+        isSecondary = true;
+
+      } else if (status.state === 'working-sunday') {
+
+        tone = 'is-working';
+        title = 'Working Sunday';
+        detail = dayText + '. The office is open and employees can mark attendance.';
+        label = 'Mark as Holiday';
+
+      } else {
+
+        tone = 'is-working';
+        title = 'Working day';
+        detail = dayText + '. Employees can mark attendance.';
+        noteMode = 'required';
+
+      }
+
+      holidayStatusBox.className = 'holiday-status ' + tone;
+
+      let html =
+        '<strong>' + escapeHtml(title) + '</strong>' +
+        escapeHtml(detail);
+
+      const isMarkAction = label === 'Mark as Holiday';
+
+      if (isMarkAction && Number(status.attendanceCount) > 0) {
+        html +=
+          '<div class="warn">' +
+          escapeHtml(
+            status.attendanceCount +
+            ' attendance record(s) already exist for this date.'
+          ) +
+          '</div>';
+      }
+
+      holidayStatusBox.innerHTML = html;
+
+      if (noteMode === 'none') {
+
+        holidayNoteField.style.display = 'none';
+
+      } else {
+
+        holidayNoteField.style.display = 'flex';
+
+        if (noteMode === 'required') {
+          holidayNoteLabel.textContent = 'Holiday note (required)';
+          holidayNote.placeholder = 'e.g. Diwali — Public Holiday';
+        } else {
+          holidayNoteLabel.textContent = 'Note (optional)';
+          holidayNote.placeholder = 'e.g. Month-end closing';
+        }
+
+      }
+
+      holidayActionButton.textContent = label;
+      holidayActionButton.className =
+        'registration-generate-button' + (isSecondary ? ' is-secondary' : '');
+      holidayActionButton.disabled = false;
+
+    }
+
+    function loadHolidayStatus(dateKey) {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        return;
+      }
+
+      if (!dateKey) {
+        holidayState = null;
+        renderHolidayStatus();
+        return;
+      }
+
+      holidayActionButton.disabled = true;
+
+      holidayStatusBox.className = 'holiday-status';
+      holidayStatusBox.textContent = 'Checking date…';
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          if (!result || !result.success) {
+
+            holidayState = null;
+            renderHolidayStatus();
+
+            showHolidayMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to check this date.',
+              'error'
+            );
+
+            return;
+          }
+
+          // Ignore a late response for a date that is no longer selected.
+          if (result.date !== holidayDate.value.trim()) {
+            return;
+          }
+
+          holidayState = result;
+          renderHolidayStatus();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          holidayState = null;
+          renderHolidayStatus();
+
+          showHolidayMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to check this date.',
+            'error'
+          );
+
+        })
+
+        .getHolidayStatusForAdmin(session.sessionToken, dateKey);
+
+    }
+
+    function loadHolidayList(year) {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        return;
+      }
+
+      holidayListYear = year;
+
+      holidayListTitle.textContent = 'Holidays & Working Sundays — ' + year;
+
+      holidayListLoading.style.display = 'block';
+      holidayListContainer.style.display = 'none';
+      holidayListEmpty.style.display = 'none';
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          holidayListLoading.style.display = 'none';
+
+          if (!result || !result.success) {
+
+            holidayListEmpty.textContent =
+              result && result.reason
+                ? result.reason
+                : 'Unable to load holidays.';
+
+            holidayListEmpty.style.display = 'block';
+
+            return;
+          }
+
+          const items = result.holidays || [];
+
+          holidayListBody.innerHTML = '';
+
+          if (items.length === 0) {
+
+            holidayListEmpty.textContent =
+              'No holidays or working Sundays marked for ' + year + ' yet.';
+
+            holidayListEmpty.style.display = 'block';
+
+            return;
+          }
+
+          items.forEach(function(item) {
+
+            const row = document.createElement('tr');
+
+            row.innerHTML =
+              '<td>' + escapeHtml(formatDisplayDate(item.dateKey)) + '</td>' +
+              '<td><span class="type-pill ' +
+                (item.isWorkingSunday ? 'working' : 'holiday') + '">' +
+                (item.isWorkingSunday ? 'Working Sunday' : 'Holiday') +
+              '</span></td>' +
+              '<td class="note-cell">' + escapeHtml(item.name || '—') + '</td>' +
+              '<td><button type="button" class="table-link" data-date="' +
+                escapeHtml(item.dateKey) + '">Select</button></td>';
+
+            holidayListBody.appendChild(row);
+
+          });
+
+          holidayListContainer.style.display = 'block';
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          holidayListLoading.style.display = 'none';
+
+          holidayListEmpty.textContent =
+            error && error.message
+              ? error.message
+              : 'Unable to load holidays.';
+
+          holidayListEmpty.style.display = 'block';
+
+        })
+
+        .getHolidaysForAdmin(session.sessionToken, year);
+
+    }
+
+    function submitHolidayAction() {
+
+      const status = holidayState;
+
+      if (!status) {
+        return;
+      }
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showHolidayMessage('Your admin session has expired. Please log in again.', 'error');
+        return;
+      }
+
+      const dateKey = holidayDate.value.trim();
+      const note = holidayNote.value.trim();
+
+      const isMark =
+        status.state === 'working-day' ||
+        status.state === 'working-sunday';
+
+      if (status.state === 'working-day' && !note) {
+        showHolidayMessage('Please enter a note describing the holiday.', 'error');
+        holidayNote.focus();
+        return;
+      }
+
+      const idleLabel = holidayActionButton.textContent;
+
+      holidayActionButton.disabled = true;
+      holidayActionButton.textContent = 'Saving…';
+
+      clearMessage(holidayMessage, 'registration-message');
+
+      const runner = google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          holidayActionButton.textContent = idleLabel;
+          holidayActionButton.disabled = false;
+
+          if (!result || !result.success) {
+
+            showHolidayMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to update this date.',
+              'error'
+            );
+
+            loadHolidayStatus(dateKey);
+
+            return;
+          }
+
+          showHolidayMessage(result.message || 'Saved.', 'success');
+
+          holidayNote.value = '';
+
+          loadHolidayStatus(dateKey);
+
+          loadHolidayList(Number(dateKey.slice(0, 4)));
+
+          refreshDashboardData();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          holidayActionButton.textContent = idleLabel;
+          holidayActionButton.disabled = false;
+
+          showHolidayMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to update this date.',
+            'error'
+          );
+
+        });
+
+      if (isMark) {
+        runner.adminMarkHoliday(session.sessionToken, dateKey, note);
+      } else {
+        runner.adminUnmarkHoliday(session.sessionToken, dateKey, note);
+      }
+
+    }
+
+    function onHolidayDateChange() {
+
+      const dateKey = holidayDate.value.trim();
+
+      clearMessage(holidayMessage, 'registration-message');
+
+      holidayNote.value = '';
+
+      loadHolidayStatus(dateKey);
+
+      if (dateKey) {
+
+        const year = Number(dateKey.slice(0, 4));
+
+        if (year && year !== holidayListYear) {
+          loadHolidayList(year);
+        }
+
+      }
+
+    }
+
+    holidayDate.addEventListener('change', onHolidayDateChange);
+
+    holidayActionButton.addEventListener('click', submitHolidayAction);
+
+    holidayListBody.addEventListener('click', function(event) {
+
+      const button = event.target.closest('[data-date]');
+
+      if (!button) {
+        return;
+      }
+
+      holidayDate.value = button.dataset.date;
+
+      onHolidayDateChange();
+
+      holidayDate.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    });
+
+    function initializeHolidayTab() {
+
+      holidayDate.value = getTodayDateInputValue();
+
+      holidayNote.value = '';
+
+      holidayState = null;
+      holidayListYear = null;
+
+      clearMessage(holidayMessage, 'registration-message');
+
+      renderHolidayStatus();
+
+      loadHolidayStatus(holidayDate.value);
+
+      loadHolidayList(Number(holidayDate.value.slice(0, 4)));
+
+    }
+
+
+    /*************************************************
+     * REVOKE DEVICE
+     *************************************************/
+
+    function showRevokeMessage(message, type) {
+      setMessage(revokeMessage, 'registration-message', message, type);
+    }
+
+    function loadRevocableDevices() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        return;
+      }
+
+      revokeEmployeeSelect.innerHTML = '<option value="">Loading devices…</option>';
+      revokeEmployeeSelect.disabled = true;
+      revokeDeviceButton.disabled = true;
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          if (!result || !result.success) {
+
+            revokeEmployeeSelect.innerHTML = '<option value="">Unable to load devices</option>';
+            revokeEmployeeSelect.disabled = false;
+
+            showRevokeMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to load registered devices.',
+              'error'
+            );
+
+            return;
+          }
+
+          const devices = result.devices || [];
+
+          if (devices.length === 0) {
+
+            revokeEmployeeSelect.innerHTML = '<option value="">No active devices</option>';
+            revokeEmployeeSelect.disabled = true;
+
+            return;
+          }
+
+          revokeEmployeeSelect.innerHTML = '<option value="">Select Employee</option>';
+
+          devices.forEach(function(device) {
+
+            const option = document.createElement('option');
+
+            option.value = device.employeeId;
+
+            option.textContent =
+              device.employeeName + ' — ' + device.employeeId +
+              (device.employeeActive ? '' : ' (inactive)');
+
+            revokeEmployeeSelect.appendChild(option);
+
+          });
+
+          revokeEmployeeSelect.disabled = false;
+          revokeDeviceButton.disabled = false;
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          console.error('Unable to load devices:', error);
+
+          revokeEmployeeSelect.innerHTML = '<option value="">Unable to load devices</option>';
+          revokeEmployeeSelect.disabled = false;
+
+        })
+
+        .getRevocableDevicesForAdmin(session.sessionToken);
+
+    }
+
+    function revokeSelectedDevice() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showRevokeMessage('Your admin session has expired. Please log in again.', 'error');
+        return;
+      }
+
+      const employeeId = revokeEmployeeSelect.value.trim();
+
+      if (!employeeId) {
+        showRevokeMessage('Please select an employee.', 'error');
+        return;
+      }
+
+      revokeDeviceButton.disabled = true;
+      revokeDeviceButton.textContent = 'Revoking…';
+
+      clearMessage(revokeMessage, 'registration-message');
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          revokeDeviceButton.textContent = 'Revoke Device';
+
+          if (!result || !result.success) {
+
+            revokeDeviceButton.disabled = false;
+
+            showRevokeMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to revoke the device.',
+              'error'
+            );
+
+            return;
+          }
+
+          showRevokeMessage(
+            result.message || 'Device revoked.',
+            'success'
+          );
+
+          revokeReason.value = '';
+
+          loadRevocableDevices();
+
+          refreshDashboardData();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          revokeDeviceButton.textContent = 'Revoke Device';
+          revokeDeviceButton.disabled = false;
+
+          showRevokeMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to revoke the device.',
+            'error'
+          );
+
+        })
+
+        .adminRevokeDevice(
+          session.sessionToken,
+          employeeId,
+          revokeReason.value.trim()
+        );
+
+    }
+
+    const disarmRevoke = setupConfirmButton(
+      revokeDeviceButton,
+      'Revoke Device',
+      'Click again to confirm',
+      function() {
+
+        if (!revokeEmployeeSelect.value.trim()) {
+          showRevokeMessage('Please select an employee.', 'error');
+          return false;
+        }
+
+        clearMessage(revokeMessage, 'registration-message');
+
+        return true;
+      },
+      revokeSelectedDevice
+    );
+
+    revokeEmployeeSelect.addEventListener('change', disarmRevoke);
+
+
+    /*************************************************
+     * EMPLOYEES — ADD
+     *************************************************/
+
+    function showAddEmployeeMessage(message, type) {
+      setMessage(addEmployeeMessage, 'registration-message', message, type);
+    }
+
+    function addEmployee() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showAddEmployeeMessage('Your admin session has expired. Please log in again.', 'error');
+        return;
+      }
+
+      const name = newEmployeeName.value.trim().replace(/\s+/g, ' ');
+      const department = newEmployeeDepartment.value.trim();
+
+      if (name.length < 2) {
+        showAddEmployeeMessage("Please enter the employee's name.", 'error');
+        newEmployeeName.focus();
+        return;
+      }
+
+      addEmployeeButton.disabled = true;
+      addEmployeeButton.textContent = 'Adding…';
+
+      clearMessage(addEmployeeMessage, 'registration-message');
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          addEmployeeButton.disabled = false;
+          addEmployeeButton.textContent = 'Add Employee';
+
+          if (!result || !result.success) {
+
+            showAddEmployeeMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to add the employee.',
+              'error'
+            );
+
+            return;
+          }
+
+          showAddEmployeeMessage(
+            'Added ' + result.employeeName + ' as ' + result.employeeId +
+            '. Joining date: ' + formatDisplayDate(result.joiningDate) + '.',
+            'success'
+          );
+
+          newEmployeeName.value = '';
+          newEmployeeDepartment.value = '';
+
+          loadEmployeeLists();
+
+          refreshDashboardData();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          addEmployeeButton.disabled = false;
+          addEmployeeButton.textContent = 'Add Employee';
+
+          showAddEmployeeMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to add the employee.',
+            'error'
+          );
+
+        })
+
+        .adminAddEmployee(session.sessionToken, name, department);
+
+    }
+
+    addEmployeeButton.addEventListener('click', addEmployee);
+
+    newEmployeeName.addEventListener('keydown', function(event) {
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        addEmployee();
+      }
+
+    });
+
+
+    /*************************************************
+     * EMPLOYEES — REMOVE (set status to Inactive)
+     *************************************************/
+
+    function showRemoveEmployeeMessage(message, type) {
+      setMessage(removeEmployeeMessage, 'registration-message', message, type);
+    }
+
+    function removeSelectedEmployee() {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        showRemoveEmployeeMessage('Your admin session has expired. Please log in again.', 'error');
+        return;
+      }
+
+      const employeeId = removeEmployeeSelect.value.trim();
+
+      if (!employeeId) {
+        showRemoveEmployeeMessage('Please select an employee.', 'error');
+        return;
+      }
+
+      removeEmployeeButton.disabled = true;
+      removeEmployeeButton.textContent = 'Removing…';
+
+      clearMessage(removeEmployeeMessage, 'registration-message');
+
+      google.script.run
+
+        .withSuccessHandler(function(result) {
+
+          removeEmployeeButton.disabled = false;
+          removeEmployeeButton.textContent = 'Remove Employee';
+
+          if (!result || !result.success) {
+
+            showRemoveEmployeeMessage(
+              result && result.reason
+                ? result.reason
+                : 'Unable to remove the employee.',
+              'error'
+            );
+
+            return;
+          }
+
+          showRemoveEmployeeMessage(
+            result.message || 'Employee removed.',
+            'success'
+          );
+
+          loadEmployeeLists();
+
+          loadRevocableDevices();
+
+          refreshDashboardData();
+
+        })
+
+        .withFailureHandler(function(error) {
+
+          removeEmployeeButton.disabled = false;
+          removeEmployeeButton.textContent = 'Remove Employee';
+
+          showRemoveEmployeeMessage(
+            error && error.message
+              ? error.message
+              : 'Unable to remove the employee.',
+            'error'
+          );
+
+        })
+
+        .adminDeactivateEmployee(session.sessionToken, employeeId);
+
+    }
+
+    const disarmRemove = setupConfirmButton(
+      removeEmployeeButton,
+      'Remove Employee',
+      'Click again to confirm',
+      function() {
+
+        if (!removeEmployeeSelect.value.trim()) {
+          showRemoveEmployeeMessage('Please select an employee.', 'error');
+          return false;
+        }
+
+        clearMessage(removeEmployeeMessage, 'registration-message');
+
+        return true;
+      },
+      removeSelectedEmployee
+    );
+
+    removeEmployeeSelect.addEventListener('change', disarmRemove);
+
+
+    /*************************************************
+     * INITIALIZE DASHBOARD
+     *************************************************/
+
+    function initializeDashboard() {
+
+      // Always open on the Dashboard tab after signing in.
+      switchTab('dashboard');
+
+      populateMonthSelector();
+      populateLateReportMonthSelector();
+
+      clearMessage(monthlyMessage, 'inline-message');
+      clearMessage(lateReportMessage, 'inline-message');
+
+      const current = getCurrentYearMonth();
+
+      loadDashboard(current.year, current.month);
+
+      // Sets the dates, loads the employee dropdowns and the daily list.
+      initializeAttendanceForm();
+
+      initializeHolidayTab();
+
+      loadRevocableDevices();
+
+    }
+
+
+    /*************************************************
+     * PIN SHOW / HIDE (eye icon)
+     *************************************************/
+
+    const togglePinButton = $('togglePin');
+
+    function resetPinVisibility() {
+
+      adminPinInput.type = 'password';
+
+      togglePinButton.classList.remove('is-visible');
+      togglePinButton.setAttribute('aria-label', 'Show PIN');
+
+    }
+
+    togglePinButton.addEventListener('click', function() {
+
+      const show = adminPinInput.type === 'password';
+
+      adminPinInput.type = show ? 'text' : 'password';
+
+      togglePinButton.classList.toggle('is-visible', show);
+      togglePinButton.setAttribute('aria-label', show ? 'Hide PIN' : 'Show PIN');
+
+      adminPinInput.focus();
+
+    });
+
+
+    /*************************************************
+     * START
+     *************************************************/
+
+    loadAdminOptions();
+
+    checkExistingSession();
+
   </script>
 
+
+  <script>
+    (function () {
+      var nameEl = document.getElementById('adminName');
+      var av = document.getElementById('adminAvatar');
+      if (!nameEl || !av) return;
+      function sync() {
+        var parts = (nameEl.textContent || '').trim().split(/\s+/).filter(Boolean);
+        if (parts.length) av.textContent = ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+      }
+      new MutationObserver(sync).observe(nameEl, { childList: true, characterData: true, subtree: true });
+      sync();
+    })();
+  </script>
 </body>
 </html>
