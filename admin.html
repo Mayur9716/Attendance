@@ -4759,7 +4759,8 @@
         const rowIndex = index + 1;       // header is row 0
 
         const statuses = employee.statuses.map(function(status) {
-          return status ? status : null;      // blank when unmarked
+          if (!status) { return null; }            // blank when unmarked
+          return status === 'Leave' ? 'Approved Leave' : status;
         });
 
         const counted = employee.countedDates || [];
@@ -4839,7 +4840,7 @@
         sheet,
         [[
           'Attendance % = (Present + WFH + first 2 Sick Leaves + 0.5 × Half Day) ÷ Working Days. ' +
-          'Leave, Absent and blank days count as 0. Edit any status above and the percentage updates.'
+          'Approved Leave, Absent and blank days count as 0. Edit any status above and the percentage updates.'
         ]],
         { origin: { r: noteRow, c: 0 } }
       );
