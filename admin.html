@@ -1163,7 +1163,7 @@
     .tab-button[data-tab="manage"] svg { stroke: #45d6c4; }
     .tab-button[data-tab="devices"] svg { stroke: #b9c2dc; }
     .tab-button[data-tab="holidays"] svg { stroke: #ffc233; }
-    .tab-button[data-tab="revoke"] svg { stroke: #c066ff; }
+    .tab-button[data-tab="admins"] svg { stroke: #c066ff; }
     .tab-button[data-tab="employees"] svg { stroke: #45d6c4; }
     .tab-button[data-tab="latereport"] svg { stroke: #ff6b6b; }
 
@@ -1509,6 +1509,86 @@
 
     #loginError { background: rgba(244, 63, 94, 0.14); border-color: rgba(244, 63, 94, 0.45); color: #ffa3b3; }
     .login-footer { color: #8c97b5; }
+
+    /* ===== Solid table headers (rows no longer show through) ===== */
+    .attendance-table th {
+      background-color: #1b1c3a !important;
+      background-image: linear-gradient(rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.07));
+      z-index: 10;
+    }
+    .attendance-table td { position: relative; z-index: 0; }
+
+    /* ===== Clickable dashboard cards ===== */
+    [data-daily-status] { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s, filter 0.15s; }
+    .stat-card[data-daily-status]:hover { transform: translateY(-3px); filter: brightness(1.12); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35); }
+    [data-daily-status]:focus-visible { outline: 2px solid #8b7cff; outline-offset: 2px; }
+    body.role-viewer [data-daily-status="__devices"] { cursor: default; transform: none !important; filter: none !important; box-shadow: none !important; }
+
+    /* ===== Status multi-select ===== */
+    .status-filter { position: relative; }
+    .status-filter-button {
+      height: 40px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06); color: #e7eaf7; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .status-filter-button.has-filter { border-color: #8b7cff; background: rgba(139, 124, 255, 0.18); }
+    .status-filter-button svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+    .status-filter-menu {
+      position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 210px; padding: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px;
+      background: #1b1c3a; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    }
+    .status-filter-menu[hidden] { display: none; }
+    .status-filter-menu label {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px;
+      color: #e7eaf7; font-size: 13px; cursor: pointer;
+    }
+    .status-filter-menu label:hover { background: rgba(255, 255, 255, 0.07); }
+    .status-filter-menu input { width: 16px; height: 16px; accent-color: #8b7cff; }
+    .status-filter-clear {
+      width: 100%; margin-top: 6px; padding: 8px; border: none; border-radius: 9px;
+      background: rgba(255, 255, 255, 0.07); color: #c9cfe8; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+
+    /* ===== Admin accounts ===== */
+    .role-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .role-badge.super { background: rgba(255, 194, 51, 0.18); color: #ffc65c; }
+    .role-badge.admin { background: rgba(124, 108, 242, 0.25); color: #cfc8ff; }
+    .role-badge.viewer { background: rgba(34, 211, 238, 0.18); color: #6ee7f9; }
+    .admin-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+    .admin-actions select, .admin-actions button {
+      height: 34px; padding: 0 12px; border-radius: 10px; font: inherit; font-size: 12px; font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #e7eaf7; cursor: pointer;
+    }
+    .admin-actions select option { color: #111; }
+    .admin-actions .danger { border-color: rgba(244, 63, 94, 0.5); color: #ff8a9f; }
+    .admin-actions .danger.armed { background: #e11d48; color: #fff; }
+    .admin-actions .self-tag { color: #8e9ab8; font-size: 12px; }
+    tr.is-removed td { opacity: 0.55; }
+
+    /* ===== Dialog + toast ===== */
+    .dialog-overlay {
+      position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center;
+      padding: 16px; background: rgba(5, 5, 20, 0.65);
+    }
+    .dialog {
+      width: 100%; max-width: 400px; padding: 22px; border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.14); background: #1b1c3a; color: #e7eaf7;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+    .dialog h3 { margin: 0 0 6px; font-size: 18px; }
+    .dialog p { margin: 0 0 14px; color: #a9b2cf; font-size: 13px; line-height: 1.5; }
+    .dialog .attendance-field { margin-bottom: 12px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .dialog-actions button { height: 40px; padding: 0 18px; border-radius: 11px; border: none; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    #dialogCancel { background: rgba(255, 255, 255, 0.09); color: #e7eaf7; }
+    #dialogOk { background: linear-gradient(135deg, #7c6cf2, #5b4ee0); color: #fff; }
+    #dialogOk:disabled { opacity: 0.6; cursor: wait; }
+    .toast {
+      position: fixed; left: 50%; bottom: 28px; z-index: 120; transform: translateX(-50%);
+      padding: 12px 20px; border-radius: 12px; background: #16a34a; color: #fff; font-size: 14px; font-weight: 600;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4); display: none;
+    }
   </style>
    
 </head>
@@ -1618,6 +1698,10 @@
           <div id="adminRole" class="admin-role"></div>
         </div>
         <div id="adminAvatar" class="admin-avatar">AD</div>
+        <button type="button" id="changePinButton" class="logout-button" title="Change your PIN">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Change PIN
+        </button>
         <button type="button" id="logoutButton" class="logout-button">
           <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           Logout
@@ -1670,11 +1754,6 @@
           Holiday Maker
         </button>
 
-        <button type="button" class="tab-button" role="tab" data-tab="revoke" aria-selected="false" tabindex="-1">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-          Revoke Device
-        </button>
-
         <button type="button" class="tab-button" role="tab" data-tab="employees" aria-selected="false" tabindex="-1">
           <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
           Employees
@@ -1683,6 +1762,11 @@
         <button type="button" class="tab-button" role="tab" data-tab="latereport" aria-selected="false" tabindex="-1">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Late Report
+        </button>
+
+        <button type="button" class="tab-button" role="tab" data-tab="admins" aria-selected="false" tabindex="-1" style="display:none;">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          Admins
         </button>
 
       </div>
@@ -1715,56 +1799,56 @@
 
         <div class="dashboard-grid">
 
-          <div class="stat-card">
+          <div class="stat-card" data-daily-status="__all" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
             <div class="stat-label">TOTAL EMPLOYEES</div>
             <div id="statTotalEmployees" class="stat-value">—</div>
             <div class="stat-note">Active employees</div>
           </div>
 
-          <div class="stat-card present-card">
+          <div class="stat-card present-card" data-daily-status="Present" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
             <div class="stat-label">PRESENT TODAY</div>
             <div id="statPresent" class="stat-value">—</div>
             <div class="stat-note">Office attendance</div>
           </div>
 
-          <div class="stat-card absent-card">
+          <div class="stat-card absent-card" data-daily-status="Absent" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span>
             <div class="stat-label">ABSENT TODAY</div>
             <div id="statAbsent" class="stat-value">—</div>
             <div class="stat-note">Marked absent</div>
           </div>
 
-          <div class="stat-card wfh-card">
+          <div class="stat-card wfh-card" data-daily-status="WFH" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
             <div class="stat-label">WFH TODAY</div>
             <div id="statWfh" class="stat-value">—</div>
             <div class="stat-note">Working from home</div>
           </div>
 
-          <div class="stat-card sick-card">
+          <div class="stat-card sick-card" data-daily-status="Sick Leave" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
             <div class="stat-label">SICK LEAVE TODAY</div>
             <div id="statSickLeave" class="stat-value">—</div>
             <div class="stat-note">Eligible sick leave</div>
           </div>
 
-          <div class="stat-card leave-card">
+          <div class="stat-card leave-card" data-daily-status="Leave" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
             <div class="stat-label">APPROVED LEAVE TODAY</div>
             <div id="statLeave" class="stat-value">—</div>
             <div class="stat-note">Approved / recorded leave</div>
           </div>
 
-          <div class="stat-card halfday-card">
+          <div class="stat-card halfday-card" data-daily-status="Half Day" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
             <div class="stat-label">HALF DAY TODAY</div>
             <div id="statHalfDay" class="stat-value">—</div>
             <div class="stat-note">0.5 attendance credit</div>
           </div>
 
-          <div class="stat-card device-card">
+          <div class="stat-card device-card" data-daily-status="__devices" role="button" tabindex="0" title="Click to see the list">
             <span class="stat-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
             <div class="stat-label">REGISTERED DEVICES</div>
             <div id="statRegisteredDevices" class="stat-value">—</div>
@@ -1782,7 +1866,7 @@
             </div>
 
             <div class="glance-actions">
-              <span id="notMarkedBadge" class="not-marked-badge">Not Marked: —</span>
+              <span id="notMarkedBadge" class="not-marked-badge" data-daily-status="Not Marked" role="button" tabindex="0" title="Click to see who has not marked">Not Marked: —</span>
               <button type="button" class="link-button" data-goto="daily">View details →</button>
             </div>
 
@@ -1848,6 +1932,23 @@
                   Unmarked
                   <span id="unmarkedCount">—</span>
                 </button>
+              </div>
+
+              <div class="status-filter" id="statusFilter">
+                <button type="button" id="statusFilterButton" class="status-filter-button" aria-haspopup="true" aria-expanded="false">
+                  <span id="statusFilterLabel">Status: All</span>
+                  <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div id="statusFilterMenu" class="status-filter-menu" hidden>
+                  <label><input type="checkbox" value="Present"> Present</label>
+                  <label><input type="checkbox" value="Absent"> Absent</label>
+                  <label><input type="checkbox" value="WFH"> WFH</label>
+                  <label><input type="checkbox" value="Sick Leave"> Sick Leave</label>
+                  <label><input type="checkbox" value="Leave"> Approved Leave</label>
+                  <label><input type="checkbox" value="Half Day"> Half Day</label>
+                  <label><input type="checkbox" value="Not Marked"> Not Marked</label>
+                  <button type="button" id="statusFilterClear" class="status-filter-clear">Clear filter</button>
+                </div>
               </div>
 
               <button type="button" id="refreshAttendanceButton" class="refresh-attendance-button">Refresh</button>
@@ -2069,6 +2170,51 @@
 
         </div>
 
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Device Deregistration</h3>
+              <p>Use this when an employee gets a new phone. It removes the registration of their old device so you can generate a new registration code.</p>
+            </div>
+          </div>
+
+          <div class="device-registration">
+
+            <div class="device-registration-form">
+
+              <div class="device-registration-field">
+                <label for="revokeEmployee">Employee</label>
+                <select id="revokeEmployee">
+                  <option value="">Loading devices…</option>
+                </select>
+              </div>
+
+              <button type="button" id="revokeDeviceButton" class="danger-button" disabled>
+                Deregister Device
+              </button>
+
+            </div>
+
+            <div class="attendance-field stack-gap">
+              <label for="revokeReason">Reason (optional)</label>
+              <input type="text" id="revokeReason" maxlength="100" autocomplete="off" placeholder="e.g. Phone lost or replaced">
+            </div>
+
+            <div class="info-note stack-gap">
+              Only employees who currently have a registered device are listed.
+              After deregistering, generate a new registration code for the
+              employee in the <strong>Device Registration</strong> section above.
+              The old device record is kept in the history.
+            </div>
+
+            <div id="revokeMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
       </section>
 
 
@@ -2171,58 +2317,7 @@
            TAB 7 — REVOKE DEVICE
            ============================== -->
 
-      <section class="tab-panel" id="panel-revoke" role="tabpanel">
 
-        <div class="dashboard-section">
-
-          <div class="section-header">
-            <div class="section-title">
-              <h3>Revoke Device</h3>
-              <p>Remove an employee's registered device so a new one can be registered.</p>
-            </div>
-          </div>
-
-          <div class="device-registration">
-
-            <div class="device-registration-form">
-
-              <div class="device-registration-field">
-                <label for="revokeEmployee">Employee</label>
-                <select id="revokeEmployee">
-                  <option value="">Loading devices…</option>
-                </select>
-              </div>
-
-              <button type="button" id="revokeDeviceButton" class="danger-button" disabled>
-                Revoke Device
-              </button>
-
-            </div>
-
-            <div class="attendance-field stack-gap">
-              <label for="revokeReason">Reason (optional)</label>
-              <input
-                type="text"
-                id="revokeReason"
-                maxlength="100"
-                autocomplete="off"
-                placeholder="e.g. Phone lost or replaced"
-              >
-            </div>
-
-            <div class="info-note stack-gap">
-              Only employees who currently have an active device are listed.
-              After revoking, create a new registration code for the employee
-              from the <strong>Device Registration</strong> tab.
-            </div>
-
-            <div id="revokeMessage" class="registration-message"></div>
-
-          </div>
-
-        </div>
-
-      </section>
 
 
       <!-- ==============================
@@ -2316,8 +2411,8 @@
 
             <div class="info-note stack-gap">
               This changes the employee's status from Active to Inactive.
-              If they still have a registered device, revoke it from the
-              <strong>Revoke Device</strong> tab.
+              If they still have a registered device, deregister it from the
+              <strong>Device Registration</strong> tab.
             </div>
 
             <div id="removeEmployeeMessage" class="registration-message"></div>
@@ -2328,6 +2423,87 @@
 
       </section>
 
+
+
+      <!-- ==============================
+           TAB — ADMINS (Super Admin only)
+           ============================== -->
+
+      <section class="tab-panel" id="panel-admins" role="tabpanel">
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>Add Admin or Viewer</h3>
+              <p>An Admin can view and change attendance. A Viewer can only view the Dashboard, Daily Attendance, Monthly Report and Late Report.</p>
+            </div>
+          </div>
+
+          <div class="attendance-management">
+
+            <div class="attendance-form">
+
+              <div class="attendance-field">
+                <label for="newAdminName">Name</label>
+                <input type="text" id="newAdminName" maxlength="60" autocomplete="off" placeholder="Full name">
+              </div>
+
+              <div class="attendance-field">
+                <label for="newAdminRole">Role</label>
+                <select id="newAdminRole">
+                  <option value="Admin">Admin</option>
+                  <option value="Viewer">Viewer</option>
+                </select>
+              </div>
+
+              <div class="attendance-field">
+                <label for="newAdminPin">6-digit PIN</label>
+                <input type="text" id="newAdminPin" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="e.g. 482915">
+              </div>
+
+              <div class="attendance-field full-width">
+                <div class="attendance-actions">
+                  <button type="button" id="addAdminButton" class="attendance-save-button">Add Person</button>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="info-note stack-gap">
+              Tell the person their PIN yourself. They can change it any time with the
+              <strong>Change PIN</strong> button at the top of the page.
+            </div>
+
+            <div id="addAdminMessage" class="registration-message"></div>
+
+          </div>
+
+        </div>
+
+        <div class="dashboard-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h3>People with access</h3>
+              <p>Change a role, set a new PIN, or remove someone. Removing keeps their history.</p>
+            </div>
+          </div>
+
+          <div id="adminsMessage" class="registration-message"></div>
+
+          <div class="table-wrapper">
+            <table class="attendance-table" style="min-width: 640px;">
+              <thead>
+                <tr><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="adminsTableBody"></tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </section>
 
       <!-- ==============================
            TAB 9 — LATE REPORT / IN-TIME
@@ -2396,6 +2572,21 @@
   </section>
 
 
+  <div id="dialogOverlay" class="dialog-overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <h3 id="dialogTitle"></h3>
+      <p id="dialogText"></p>
+      <div id="dialogFields"></div>
+      <div id="dialogError" class="registration-message"></div>
+      <div class="dialog-actions">
+        <button type="button" id="dialogCancel">Cancel</button>
+        <button type="button" id="dialogOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
   <script>
 
     /*************************************************
@@ -2406,7 +2597,7 @@
 
     const TAB_NAMES = [
       'dashboard', 'daily', 'monthly', 'manage',
-      'devices', 'holidays', 'revoke', 'employees', 'latereport'
+      'devices', 'holidays', 'employees', 'latereport', 'admins'
     ];
 
     function $(id) {
@@ -2463,6 +2654,8 @@
 
       adminName.textContent = session.adminName || '';
       adminRole.textContent = session.role || '';
+
+      applyRoleUi();
 
       initializeDashboard();
     }
@@ -2700,7 +2893,7 @@
 
     function switchTab(name) {
 
-      if (TAB_NAMES.indexOf(name) === -1) {
+      if (TAB_NAMES.indexOf(name) === -1 || !canUseTab(name)) {
         name = 'dashboard';
       }
 
@@ -2729,6 +2922,10 @@
       // Load data for tabs that need it on activation
       if (name === 'latereport') {
         loadLateReport();
+      }
+
+      if (name === 'admins') {
+        loadAdmins();
       }
 
     }
@@ -3819,6 +4016,9 @@
       }
 
       const unmarkedMode = dailyViewMode === 'unmarked';
+      const readOnly = currentRoleKey() === 'viewer';
+
+      statusFilterBox.style.display = unmarkedMode ? 'none' : '';
 
       dailyAllButton.classList.toggle('is-active', !unmarkedMode);
       unmarkedButton.classList.toggle('is-active', unmarkedMode);
@@ -3838,7 +4038,10 @@
         (data.markedCount ?? 0) +
         ' of ' +
         (data.totalEmployees ?? 0) +
-        ' employees marked.';
+        ' employees marked.' +
+        (!unmarkedMode && dailyStatusFilter.length
+          ? ' Showing only: ' + dailyStatusFilter.map(statusDisplayName).join(', ') + '.'
+          : '');
 
       if (data.isWorkingDay === false) {
 
@@ -3859,7 +4062,11 @@
         unmarkedMode
           ? (data.unmarkedEmployees || [])
           : (data.records || [])
-      ).slice().sort(function(a, b) {
+      ).slice().filter(function(record) {
+        return unmarkedMode ||
+          dailyStatusFilter.length === 0 ||
+          dailyStatusFilter.indexOf(record.status || 'Not Marked') !== -1;
+      }).sort(function(a, b) {
         return String(a.employeeName || '').localeCompare(
           String(b.employeeName || ''),
           'en-IN',
@@ -3875,7 +4082,9 @@
 
         dailyTableEmpty.textContent = unmarkedMode
           ? 'All employees have marked attendance for this date.'
-          : 'No employees found.';
+          : (dailyStatusFilter.length
+              ? 'No employees match the selected status.'
+              : 'No employees found.');
 
         dailyTableEmpty.style.display = 'block';
 
@@ -3889,7 +4098,7 @@
             '<th>Employee</th>' +
             '<th>Department</th>' +
             '<th>Status</th>' +
-            '<th>Action</th>' +
+            (readOnly ? '' : '<th>Action</th>') +
           '</tr>';
 
         list.forEach(function(employee) {
@@ -3900,7 +4109,7 @@
             '<td>' + employeeCellHtml(employee.employeeName, employee.employeeId) + '</td>' +
             '<td>' + escapeHtml(employee.department || '—') + '</td>' +
             '<td>' + statusPillHtml('Not Marked') + '</td>' +
-            '<td>' +
+            (readOnly ? '' : '<td>' +
               '<select class="unmarked-status-select"' +
                 ' data-employee-id="' + escapeHtml(employee.employeeId) + '"' +
                 ' aria-label="Mark attendance for ' + escapeHtml(employee.employeeName) + '">' +
@@ -3912,7 +4121,7 @@
                 '<option value="Half Day">Half Day</option>' +
                 '<option value="Absent">Absent</option>' +
               '</select>' +
-            '</td>';
+            '</td>');
 
           dailyTableBody.appendChild(row);
 
@@ -5479,7 +5688,7 @@
       }
 
       revokeDeviceButton.disabled = true;
-      revokeDeviceButton.textContent = 'Revoking…';
+      revokeDeviceButton.textContent = 'Deregistering…';
 
       clearMessage(revokeMessage, 'registration-message');
 
@@ -5487,7 +5696,7 @@
 
         .withSuccessHandler(function(result) {
 
-          revokeDeviceButton.textContent = 'Revoke Device';
+          revokeDeviceButton.textContent = 'Deregister Device';
 
           if (!result || !result.success) {
 
@@ -5496,7 +5705,7 @@
             showRevokeMessage(
               result && result.reason
                 ? result.reason
-                : 'Unable to revoke the device.',
+                : 'Unable to deregister the device.',
               'error'
             );
 
@@ -5504,7 +5713,7 @@
           }
 
           showRevokeMessage(
-            result.message || 'Device revoked.',
+            result.message || 'Device deregistered.',
             'success'
           );
 
@@ -5518,13 +5727,13 @@
 
         .withFailureHandler(function(error) {
 
-          revokeDeviceButton.textContent = 'Revoke Device';
+          revokeDeviceButton.textContent = 'Deregister Device';
           revokeDeviceButton.disabled = false;
 
           showRevokeMessage(
             error && error.message
               ? error.message
-              : 'Unable to revoke the device.',
+              : 'Unable to deregister the device.',
             'error'
           );
 
@@ -5540,7 +5749,7 @@
 
     const disarmRevoke = setupConfirmButton(
       revokeDeviceButton,
-      'Revoke Device',
+      'Deregister Device',
       'Click again to confirm',
       function() {
 
@@ -5776,9 +5985,11 @@
       // Sets the dates, loads the employee dropdowns and the daily list.
       initializeAttendanceForm();
 
-      initializeHolidayTab();
-
-      loadRevocableDevices();
+      // Viewers can only look; the edit tabs are not loaded for them.
+      if (currentRoleKey() !== 'viewer') {
+        initializeHolidayTab();
+        loadRevocableDevices();
+      }
 
     }
 
@@ -5811,6 +6022,577 @@
 
     });
 
+
+    /*************************************************
+     * ROLES (what each kind of person can see)
+     *************************************************/
+
+    const VIEWER_TABS = ['dashboard', 'daily', 'monthly', 'latereport'];
+
+    function currentRoleKey() {
+
+      const session = getSavedSession();
+      const role = String(session && session.role || '').toLowerCase();
+
+      if (role.indexOf('super') !== -1) { return 'super'; }
+      if (role.indexOf('viewer') !== -1) { return 'viewer'; }
+
+      return 'admin';
+    }
+
+    function canUseTab(name) {
+
+      const role = currentRoleKey();
+
+      if (role === 'viewer') { return VIEWER_TABS.indexOf(name) !== -1; }
+      if (name === 'admins') { return role === 'super'; }
+
+      return true;
+    }
+
+    function applyRoleUi() {
+
+      document.body.classList.toggle('role-viewer', currentRoleKey() === 'viewer');
+
+      document.querySelectorAll('.tab-button').forEach(function(button) {
+        button.style.display = canUseTab(button.dataset.tab) ? '' : 'none';
+      });
+    }
+
+
+    /*************************************************
+     * DASHBOARD CARDS -> DAILY ATTENDANCE (filtered)
+     *************************************************/
+
+    const statusFilterBox = $('statusFilter');
+    const statusFilterButton = $('statusFilterButton');
+    const statusFilterLabel = $('statusFilterLabel');
+    const statusFilterMenu = $('statusFilterMenu');
+
+    let dailyStatusFilter = [];     // empty = every status
+
+    function statusDisplayName(status) {
+      return status === 'Leave' ? 'Approved Leave' : status;
+    }
+
+    function syncStatusFilterUi() {
+
+      statusFilterMenu.querySelectorAll('input[type="checkbox"]').forEach(function(box) {
+        box.checked = dailyStatusFilter.indexOf(box.value) !== -1;
+      });
+
+      statusFilterLabel.textContent =
+        dailyStatusFilter.length === 0 ? 'Status: All'
+        : dailyStatusFilter.length === 1 ? 'Status: ' + statusDisplayName(dailyStatusFilter[0])
+        : 'Status: ' + dailyStatusFilter.length + ' selected';
+
+      statusFilterButton.classList.toggle('has-filter', dailyStatusFilter.length > 0);
+    }
+
+    function closeStatusMenu() {
+      statusFilterMenu.hidden = true;
+      statusFilterButton.setAttribute('aria-expanded', 'false');
+    }
+
+    function applyStatusFilter(statuses) {
+
+      dailyStatusFilter = statuses;
+      dailyViewMode = 'all';
+
+      syncStatusFilterUi();
+
+      if (dailyAttendanceData) {
+        renderDaily();
+      } else {
+        loadDailyAttendance(dailyAttendanceDate.value);
+      }
+    }
+
+    statusFilterButton.addEventListener('click', function(event) {
+
+      event.stopPropagation();
+
+      const open = statusFilterMenu.hidden;
+
+      statusFilterMenu.hidden = !open;
+      statusFilterButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    statusFilterMenu.addEventListener('click', function(event) {
+      event.stopPropagation();
+    });
+
+    statusFilterMenu.addEventListener('change', function() {
+
+      const chosen = [];
+
+      statusFilterMenu.querySelectorAll('input[type="checkbox"]').forEach(function(box) {
+        if (box.checked) { chosen.push(box.value); }
+      });
+
+      applyStatusFilter(chosen);
+    });
+
+    $('statusFilterClear').addEventListener('click', function() {
+      applyStatusFilter([]);
+      closeStatusMenu();
+    });
+
+    document.addEventListener('click', closeStatusMenu);
+
+    function openDailyFromCard(target) {
+
+      const status = target.getAttribute('data-daily-status');
+
+      if (status === '__devices') {
+        if (canUseTab('devices')) { switchTab('devices'); window.scrollTo(0, 0); }
+        return;
+      }
+
+      // The list on the dashboard is always for today.
+      dailyAttendanceDate.value = getTodayDateInputValue();
+
+      if (status === 'Not Marked') {
+        dailyStatusFilter = [];
+        dailyViewMode = 'unmarked';
+      } else {
+        dailyStatusFilter = status === '__all' ? [] : [status];
+        dailyViewMode = 'all';
+      }
+
+      syncStatusFilterUi();
+      switchTab('daily');
+      window.scrollTo(0, 0);
+
+      dailyAttendanceData = null;
+      loadDailyAttendance(dailyAttendanceDate.value);
+    }
+
+    document.addEventListener('click', function(event) {
+
+      const target = event.target.closest('[data-daily-status]');
+
+      if (target) { openDailyFromCard(target); }
+    });
+
+    document.addEventListener('keydown', function(event) {
+
+      if (event.key !== 'Enter' && event.key !== ' ') { return; }
+
+      const target = event.target.closest && event.target.closest('[data-daily-status]');
+
+      if (target && target === document.activeElement) {
+        event.preventDefault();
+        openDailyFromCard(target);
+      }
+    });
+
+    // Picking "All Employees" by hand clears the status filter.
+    dailyAllButton.addEventListener('click', function() {
+      dailyStatusFilter = [];
+      syncStatusFilterUi();
+      if (dailyAttendanceData) { renderDaily(); }
+    });
+
+
+    /*************************************************
+     * DIALOG + TOAST
+     *************************************************/
+
+    const dialogOverlay = $('dialogOverlay');
+    const dialogTitle = $('dialogTitle');
+    const dialogText = $('dialogText');
+    const dialogFields = $('dialogFields');
+    const dialogError = $('dialogError');
+    const dialogOk = $('dialogOk');
+    const dialogCancel = $('dialogCancel');
+
+    let dialogSubmit = null;
+
+    function closeDialog() {
+      dialogOverlay.style.display = 'none';
+      dialogFields.innerHTML = '';
+      dialogSubmit = null;
+    }
+
+    /**
+     * options: { title, text, okLabel, fields:[{id,label,secret}], onSubmit(values, finish) }
+     * finish(errorMessage) keeps the dialog open with the message; finish() closes it.
+     */
+    function openDialog(options) {
+
+      dialogTitle.textContent = options.title || '';
+      dialogText.textContent = options.text || '';
+      dialogOk.textContent = options.okLabel || 'Save';
+      dialogOk.disabled = false;
+      dialogError.textContent = '';
+      dialogError.className = 'registration-message';
+
+      dialogFields.innerHTML = (options.fields || []).map(function(field) {
+        return '<div class="attendance-field"><label for="dlg_' + field.id + '">' +
+          escapeHtml(field.label) + '</label>' +
+          '<input type="' + (field.secret ? 'password' : 'text') + '" id="dlg_' + field.id + '"' +
+          ' inputmode="numeric" maxlength="6" autocomplete="off"></div>';
+      }).join('');
+
+      dialogFields.querySelectorAll('input').forEach(function(input) {
+        input.addEventListener('input', function() {
+          input.value = input.value.replace(/\D/g, '').slice(0, 6);
+        });
+      });
+
+      dialogSubmit = function() {
+
+        const values = {};
+
+        (options.fields || []).forEach(function(field) {
+          values[field.id] = $('dlg_' + field.id).value.trim();
+        });
+
+        dialogOk.disabled = true;
+
+        options.onSubmit(values, function(errorMessage) {
+
+          dialogOk.disabled = false;
+
+          if (errorMessage) {
+            dialogError.textContent = errorMessage;
+            dialogError.className = 'registration-message error';
+            return;
+          }
+
+          closeDialog();
+        });
+      };
+
+      dialogOverlay.style.display = 'flex';
+
+      const first = dialogFields.querySelector('input');
+
+      if (first) { first.focus(); }
+    }
+
+    dialogOk.addEventListener('click', function() { if (dialogSubmit) { dialogSubmit(); } });
+    dialogCancel.addEventListener('click', closeDialog);
+    dialogOverlay.addEventListener('click', function(event) {
+      if (event.target === dialogOverlay) { closeDialog(); }
+    });
+
+    document.addEventListener('keydown', function(event) {
+
+      if (dialogOverlay.style.display !== 'flex') { return; }
+
+      if (event.key === 'Escape') { closeDialog(); }
+      if (event.key === 'Enter' && dialogSubmit) { event.preventDefault(); dialogSubmit(); }
+    });
+
+    let toastTimer = null;
+
+    function showToast(message) {
+
+      const toast = $('toast');
+
+      toast.textContent = message;
+      toast.style.display = 'block';
+
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(function() { toast.style.display = 'none'; }, 3500);
+    }
+
+    function isSessionProblem(reason) {
+      return /^(Invalid session|Session expired|Session required)/.test(String(reason || ''));
+    }
+
+
+    /*************************************************
+     * CHANGE MY PIN
+     *************************************************/
+
+    $('changePinButton').addEventListener('click', function() {
+
+      openDialog({
+        title: 'Change your PIN',
+        text: 'Enter your current PIN, then choose a new 6-digit PIN. Other devices signed in as you will be signed out.',
+        okLabel: 'Change PIN',
+        fields: [
+          { id: 'cur', label: 'Current PIN', secret: true },
+          { id: 'new1', label: 'New PIN', secret: true },
+          { id: 'new2', label: 'Repeat new PIN', secret: true }
+        ],
+        onSubmit: function(values, finish) {
+
+          if (!/^\d{6}$/.test(values.cur) || !/^\d{6}$/.test(values.new1)) {
+            finish('Both PINs must contain exactly 6 digits.');
+            return;
+          }
+
+          if (values.new1 !== values.new2) {
+            finish('The new PINs do not match.');
+            return;
+          }
+
+          const session = getSavedSession();
+
+          google.script.run
+            .withSuccessHandler(function(result) {
+
+              if (!result || !result.success) {
+
+                if (result && isSessionProblem(result.reason)) {
+                  closeDialog();
+                  handleDashboardSessionFailure(result.reason);
+                  return;
+                }
+
+                finish(result && result.reason ? result.reason : 'Unable to change the PIN.');
+                return;
+              }
+
+              finish();
+              showToast('Your PIN has been changed.');
+            })
+            .withFailureHandler(function(error) {
+              finish(error && error.message ? error.message : 'Unable to change the PIN.');
+            })
+            .adminChangeOwnPin(session.sessionToken, values.cur, values.new1);
+        }
+      });
+    });
+
+
+    /*************************************************
+     * ADMINS TAB (Super Admin)
+     *************************************************/
+
+    const adminsTableBody = $('adminsTableBody');
+    const adminsMessage = $('adminsMessage');
+    const addAdminMessage = $('addAdminMessage');
+
+    function showAdminsMessage(element, message, type) {
+      element.textContent = message || '';
+      element.className = 'registration-message' + (message ? ' ' + (type || 'error') : '');
+    }
+
+    function adminCall(method, args, onDone) {
+
+      const session = getSavedSession();
+
+      if (!session || !session.sessionToken) {
+        handleDashboardSessionFailure('Your admin session has expired. Please sign in again.');
+        return;
+      }
+
+      const runner = google.script.run
+        .withSuccessHandler(function(result) {
+
+          if (result && result.success === false && isSessionProblem(result.reason)) {
+            handleDashboardSessionFailure(result.reason);
+            return;
+          }
+
+          onDone(result || { success: false, reason: 'No answer from the server.' });
+        })
+        .withFailureHandler(function(error) {
+          onDone({ success: false, reason: error && error.message ? error.message : 'Request failed.' });
+        });
+
+      runner[method].apply(runner, [session.sessionToken].concat(args));
+    }
+
+    function loadAdmins() {
+
+      adminCall('getAdminsForSuperAdmin', [], function(result) {
+
+        if (!result.success) {
+          showAdminsMessage(adminsMessage, result.reason || 'Unable to load admins.', 'error');
+          return;
+        }
+
+        showAdminsMessage(adminsMessage, '');
+        renderAdmins(result.admins || []);
+      });
+    }
+
+    function renderAdmins(admins) {
+
+      adminsTableBody.innerHTML = '';
+
+      admins.forEach(function(admin) {
+
+        const row = document.createElement('tr');
+        const roleClass = admin.isSuperAdmin ? 'super' : (admin.role === 'Viewer' ? 'viewer' : 'admin');
+        const removed = admin.status !== 'Active';
+
+        row.className = removed ? 'is-removed' : '';
+
+        let actions;
+
+        if (admin.isSelf) {
+          actions = '<span class="self-tag">This is you</span>';
+        } else if (admin.isSuperAdmin) {
+          actions = '<span class="self-tag">Changed only in the database</span>';
+        } else {
+          actions =
+            (removed ? '' :
+              '<select class="admin-role-select" data-id="' + escapeHtml(admin.adminId) + '" aria-label="Role">' +
+                '<option value="Admin"' + (admin.role === 'Admin' ? ' selected' : '') + '>Admin</option>' +
+                '<option value="Viewer"' + (admin.role === 'Viewer' ? ' selected' : '') + '>Viewer</option>' +
+              '</select>' +
+              '<button type="button" data-act="pin" data-id="' + escapeHtml(admin.adminId) + '" data-name="' + escapeHtml(admin.adminName) + '">Reset PIN</button>' +
+              '<button type="button" class="danger" data-act="remove" data-id="' + escapeHtml(admin.adminId) + '">Remove</button>') +
+            (removed ? '<button type="button" data-act="restore" data-id="' + escapeHtml(admin.adminId) + '">Restore</button>' : '');
+        }
+
+        row.innerHTML =
+          '<td>' + employeeCellHtml(admin.adminName, admin.adminId) + '</td>' +
+          '<td style="text-align:center;"><span class="role-badge ' + roleClass + '">' + escapeHtml(admin.role) + '</span></td>' +
+          '<td style="text-align:center;">' + (removed ? 'Removed' : 'Active') + '</td>' +
+          '<td><div class="admin-actions">' + actions + '</div></td>';
+
+        adminsTableBody.appendChild(row);
+      });
+    }
+
+    function afterAdminChange(result, fallbackError) {
+
+      if (!result.success) {
+        showAdminsMessage(adminsMessage, result.reason || fallbackError, 'error');
+        loadAdmins();
+        return;
+      }
+
+      showAdminsMessage(adminsMessage, result.message || 'Done.', 'success');
+      loadAdmins();
+    }
+
+    adminsTableBody.addEventListener('change', function(event) {
+
+      const select = event.target.closest('.admin-role-select');
+
+      if (!select) { return; }
+
+      showAdminsMessage(adminsMessage, '');
+
+      adminCall('adminChangeRole', [select.dataset.id, select.value], function(result) {
+        afterAdminChange(result, 'Unable to change the role.');
+      });
+    });
+
+    adminsTableBody.addEventListener('click', function(event) {
+
+      const button = event.target.closest('button[data-act]');
+
+      if (!button) { return; }
+
+      const id = button.dataset.id;
+      const act = button.dataset.act;
+
+      showAdminsMessage(adminsMessage, '');
+
+      if (act === 'restore') {
+        adminCall('adminRestoreAdmin', [id], function(result) {
+          afterAdminChange(result, 'Unable to restore.');
+        });
+        return;
+      }
+
+      if (act === 'remove') {
+
+        // First click arms the button, second click confirms.
+        if (!button.classList.contains('armed')) {
+
+          button.classList.add('armed');
+          button.textContent = 'Click again to confirm';
+
+          window.setTimeout(function() {
+            button.classList.remove('armed');
+            button.textContent = 'Remove';
+          }, 4000);
+
+          return;
+        }
+
+        button.disabled = true;
+
+        adminCall('adminRemoveAdmin', [id], function(result) {
+          afterAdminChange(result, 'Unable to remove.');
+        });
+
+        return;
+      }
+
+      if (act === 'pin') {
+
+        openDialog({
+          title: 'Set a new PIN',
+          text: 'New 6-digit PIN for ' + button.dataset.name + '. They will be signed out and must use this PIN to sign in again.',
+          okLabel: 'Set PIN',
+          fields: [{ id: 'pin', label: 'New PIN' }],
+          onSubmit: function(values, finish) {
+
+            if (!/^\d{6}$/.test(values.pin)) {
+              finish('The PIN must contain exactly 6 digits.');
+              return;
+            }
+
+            adminCall('adminResetAdminPin', [id, values.pin], function(result) {
+
+              if (!result.success) {
+                finish(result.reason || 'Unable to set the PIN.');
+                return;
+              }
+
+              finish();
+              showAdminsMessage(adminsMessage, result.message, 'success');
+            });
+          }
+        });
+      }
+    });
+
+    $('newAdminPin').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    $('addAdminButton').addEventListener('click', function() {
+
+      const button = $('addAdminButton');
+
+      showAdminsMessage(addAdminMessage, '');
+
+      const name = $('newAdminName').value.trim();
+      const role = $('newAdminRole').value;
+      const pin = $('newAdminPin').value.trim();
+
+      if (name.length < 2) {
+        showAdminsMessage(addAdminMessage, "Please enter the person's name.", 'error');
+        return;
+      }
+
+      if (!/^\d{6}$/.test(pin)) {
+        showAdminsMessage(addAdminMessage, 'The PIN must contain exactly 6 digits.', 'error');
+        return;
+      }
+
+      button.disabled = true;
+
+      adminCall('adminCreateAdmin', [name, role, pin], function(result) {
+
+        button.disabled = false;
+
+        if (!result.success) {
+          showAdminsMessage(addAdminMessage, result.reason || 'Unable to add the person.', 'error');
+          return;
+        }
+
+        showAdminsMessage(addAdminMessage, result.message, 'success');
+
+        $('newAdminName').value = '';
+        $('newAdminPin').value = '';
+
+        loadAdmins();
+      });
+    });
 
     /*************************************************
      * START
