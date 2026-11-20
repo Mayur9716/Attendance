@@ -247,8 +247,22 @@
     .status-note { margin-top: 5px; color: var(--muted); font-size: 12px; }
 
     @media (max-width: 520px) {
-      .page { padding: 16px; }
-      .card { padding: 30px 22px 26px; border-radius: 20px; }
+      .page {
+        padding: 10px;
+        padding-top: calc(10px + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+        align-items: flex-start;
+      }
+      .card { padding: 18px 20px 20px; border-radius: 20px; }
+      .brand { margin-bottom: 14px; }
+      .brand-mark { width: 42px; height: 42px; margin-bottom: 8px; border-radius: 13px; font-size: 16px; }
+      .brand h1 { font-size: 21px; }
+      .brand p { margin-top: 4px; font-size: 13px; }
+      .welcome { padding: 0 0 12px; }
+      .welcome-icon { width: 46px; height: 46px; margin-bottom: 8px; font-size: 22px; }
+      .welcome h2 { font-size: 20px; }
+      .welcome p { margin-top: 4px; }
+      .help-box { margin-top: 14px; padding-top: 14px; }
     }
   </style>
 </head>
@@ -382,7 +396,7 @@
 
             <div class="help-item">
               <div class="help-title">Grievances</div>
-              <div class="help-desc">For any grievance or issue.</div>
+              <div class="help-desc">For any other grievance or issue.</div>
               <a href="mailto:iycwarroom.grievances@gmail.com">iycwarroom.grievances@gmail.com</a>
             </div>
           </div>
