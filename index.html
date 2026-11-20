@@ -8,7 +8,7 @@
   <!-- Installable web app (Add to Home Screen) -->
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#0b5a43">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Attendance">
@@ -249,33 +249,222 @@
 
     .status-note { margin-top: 5px; color: var(--muted); font-size: 12px; }
 
+
+    /* ===== Green theme ===== */
+    :root {
+      --bg: #fbf3e4;
+      --surface: #fffaf0;
+      --border: #eadfc9;
+      --text: #14301f;
+      --text-2: #44574b;
+      --muted: #7b8a7f;
+      --primary: #0f7a55;
+      --primary-dark: #0b5a43;
+      --primary-soft: #e3f4dc;
+      --success: #0f7a55;
+      --success-soft: #dff3d8;
+    }
+
+    html { background: #fbf3e4; }
+
+    body {
+      background:
+        radial-gradient(circle at 100% 100%, rgba(251, 191, 36, 0.22) 0, transparent 38%),
+        radial-gradient(circle at 0% 100%, rgba(124, 179, 66, 0.25) 0, transparent 40%),
+        #fbf3e4;
+    }
+
+    .page {
+      display: block;
+      padding: 0 0 24px;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    .container { max-width: 460px; margin: 0 auto; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 52px;
+      background:
+        radial-gradient(circle at 15% 110%, #138a5e 0, transparent 45%),
+        linear-gradient(160deg, #0b5a43, #07412f);
+      color: #ffffff;
+    }
+
+    .hero .leaf { position: absolute; pointer-events: none; }
+    .hero .leaf-a { right: -18px; top: -18px; width: 76px; height: 76px; }
+    .hero .leaf-b { right: -34px; top: 10px; width: 68px; height: 68px; transform: rotate(-20deg); }
+
+    .brand { position: relative; margin: 0; }
+
+    .brand-mark {
+      width: 44px; height: 44px; margin: 0 auto 8px;
+      border-radius: 13px; font-size: 17px;
+      background: #fff3d6; color: #0b5a43;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .brand h1 { color: #ffffff; font-size: 23px; }
+
+    .brand p { margin: 6px 0 0; color: #e8f5e6; font-size: 13px; }
+
+    .brand p span { position: relative; display: inline-block; padding: 0 10px; }
+    .brand p span::before, .brand p span::after {
+      content: ''; position: absolute; top: 50%; width: 34px; height: 1px; background: rgba(255, 255, 255, 0.45);
+    }
+    .brand p span::before { right: 100%; }
+    .brand p span::after { left: 100%; }
+
+    .card {
+      position: relative;
+      margin: -30px 12px 0;
+      padding: 18px 18px 18px;
+      border: none;
+      border-radius: 28px;
+      background: #fffaf0;
+      box-shadow: 0 14px 34px rgba(11, 90, 67, 0.16);
+    }
+
+    .primary-button {
+      background: linear-gradient(180deg, #11865c, #0b5a43);
+      box-shadow: 0 8px 18px rgba(11, 90, 67, 0.30);
+      border-radius: 16px;
+      height: 50px;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+
+    .primary-button:disabled { background: #9fb8ad; }
+
+    .field input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(15, 122, 85, 0.16); }
+
+    .welcome { padding: 0 0 12px; }
+
+    .welcome-icon {
+      width: 50px; height: 50px; margin: 0 auto 6px;
+      background: radial-gradient(circle at 30% 25%, #ecfae4, #c9ecbb);
+      border: 3px solid #d7f1ca;
+      color: #0b6a47;
+    }
+    .welcome-icon svg { width: 26px; height: 26px; }
+
+    .welcome h2 { font-size: 21px; font-weight: 400; color: var(--text); }
+    .welcome h2 strong { font-weight: 800; color: #0b5a43; }
+
+    .welcome p {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin: 8px 0 0; padding: 6px 16px;
+      border-radius: 999px; background: #fbeccb;
+      color: var(--text); font-size: 13px;
+    }
+    .welcome p::before {
+      content: ''; width: 16px; height: 16px;
+      background: no-repeat center / contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b5a43' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='5' width='17' height='15.5' rx='3'/><path d='M8 3v4M16 3v4M3.5 10h17'/></svg>");
+    }
+
+    .status-card {
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; gap: 14px;
+      margin-top: 0; padding: 12px 14px;
+      border: 1px solid #cfe6c4; border-radius: 18px;
+      background: linear-gradient(120deg, #eaf7e3, #d9efcd);
+    }
+    .status-card::after {
+      content: ''; position: absolute; right: -30px; bottom: -40px; width: 130px; height: 90px;
+      border-radius: 50%; background: rgba(124, 179, 66, 0.25);
+    }
+    .status-icon {
+      flex: 0 0 auto; width: 46px; height: 46px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      background: #cdeabf; color: #0b5a43;
+    }
+    .status-icon svg { width: 26px; height: 26px; }
+    .status-body { position: relative; min-width: 0; padding-left: 14px; border-left: 1px solid rgba(11, 90, 67, 0.18); }
+    .status-label { color: #44574b; }
+    .status-value { margin-top: 2px; font-size: 22px; font-weight: 800; color: #0b5a43; letter-spacing: -0.02em; }
+    .status-note { margin-top: 2px; color: var(--text); font-size: 12px; }
+
+    .status-card[data-state="neutral"] { background: linear-gradient(120deg, #f3f1e8, #e8e5d6); border-color: #ddd8c4; }
+    .status-card[data-state="neutral"] .status-icon { background: #e1ddca; color: #5b6358; }
+    .status-card[data-state="neutral"] .status-value { color: #3d463f; }
+    .status-card[data-state="neutral"]::after { background: rgba(120, 120, 100, 0.12); }
+    .status-card[data-state="bad"] { background: linear-gradient(120deg, #fdeceb, #f9d9d6); border-color: #f1c3be; }
+    .status-card[data-state="bad"] .status-icon { background: #f6cfca; color: #b42318; }
+    .status-card[data-state="bad"] .status-value { color: #b42318; }
+    .status-card[data-state="bad"]::after { background: rgba(220, 38, 38, 0.10); }
+
+    .info-box.office-note {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 12px; padding: 10px 14px;
+      border: none; border-radius: 14px; background: #fcefd2;
+      color: var(--text); font-size: 13px;
+    }
+    .office-note svg { flex: 0 0 auto; width: 22px; height: 22px; color: #e8820c; }
+
+    .help-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .help-box h3 {
+      display: flex; align-items: center; gap: 10px;
+      margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #0b5a43;
+    }
+    .help-box h3 svg { flex: 0 0 auto; width: 24px; height: 24px; }
+
+    .help-card {
+      display: flex; align-items: center; gap: 12px;
+      margin-top: 8px; padding: 9px 12px;
+      border: 1px solid var(--border); border-radius: 16px;
+      background: #fffdf8; text-decoration: none; color: var(--text);
+    }
+    .help-card:active { background: #f3f8ee; }
+    .help-icon {
+      flex: 0 0 auto; width: 38px; height: 38px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      background: #e3f4dc; color: #0b5a43;
+    }
+    .help-icon svg { width: 22px; height: 22px; }
+    .help-text { flex: 1; min-width: 0; display: block; line-height: 1.3; }
+    .help-title { display: block; font-size: 14px; font-weight: 700; color: var(--text); }
+    .help-desc { display: block; margin-top: 1px; font-size: 11.5px; color: var(--muted); }
+    .help-mail { display: block; margin-top: 2px; font-size: 14px; font-weight: 600; color: #0b7a4e; word-break: break-all; }
+    .help-ext { flex: 0 0 auto; width: 18px; height: 18px; color: #0b6a47; }
+
+    .install-steps li::before { background: var(--primary-soft); color: var(--primary); }
+
+    @media (min-width: 521px) {
+      .page { padding-bottom: 40px; }
+      .hero { border-radius: 0 0 28px 28px; }
+    }
+
     @media (max-width: 520px) {
-      .page {
-        padding: 10px;
-        padding-top: calc(10px + env(safe-area-inset-top, 0px));
-        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-        align-items: center;
-        min-height: 100vh;
-        min-height: 100dvh;
-      }
-      .card { padding: 18px 20px 20px; border-radius: 20px; }
-      .brand { margin-bottom: 14px; }
-      .brand-mark { width: 42px; height: 42px; margin-bottom: 8px; border-radius: 13px; font-size: 16px; }
-      .brand h1 { font-size: 21px; }
-      .brand p { margin-top: 4px; font-size: 13px; }
-      .welcome { padding: 0 0 12px; }
-      .welcome-icon { width: 46px; height: 46px; margin-bottom: 8px; font-size: 22px; }
-      .welcome h2 { font-size: 20px; }
-      .welcome p { margin-top: 4px; }
-      .help-box { margin-top: 12px; padding-top: 12px; }
-      .help-box h3 { margin-bottom: 8px; }
-      .help-item + .help-item { margin-top: 8px; }
-      .help-item .help-desc { margin: 1px 0 1px; font-size: 11.5px; }
-      .status-card { padding: 12px 14px; margin-top: 0; }
-      .status-value { margin-top: 4px; }
-      .info-box { margin-top: 12px; padding: 10px 14px; }
-      #markAttendanceButton { margin-top: 12px !important; }
-      #locationMessage { margin-top: 10px !important; }
+      .page { padding: 0 0 10px; }
+      .hero { padding: calc(10px + env(safe-area-inset-top, 0px)) 20px 40px; }
+      .brand-mark { width: 36px; height: 36px; margin-bottom: 5px; border-radius: 11px; font-size: 14px; }
+      .brand h1 { font-size: 20px; }
+      .brand p { margin-top: 3px; font-size: 12px; }
+      .card { padding: 12px 14px 14px; margin: -26px 10px 0; border-radius: 26px; }
+      .welcome { padding-bottom: 8px; }
+      .welcome-icon { width: 40px; height: 40px; margin-bottom: 3px; }
+      .welcome-icon svg { width: 22px; height: 22px; }
+      .welcome h2 { font-size: 19px; }
+      .welcome p { margin-top: 5px; padding: 4px 14px; font-size: 12.5px; }
+      .status-card { padding: 9px 12px; }
+      .status-icon { width: 40px; height: 40px; }
+      .status-value { font-size: 20px; }
+      .primary-button { height: 46px; }
+      #markAttendanceButton { margin-top: 10px !important; }
+      #locationMessage { margin-top: 8px !important; }
+      .info-box.office-note { margin-top: 10px; padding: 8px 12px; font-size: 12px; gap: 8px; }
+      .help-box { margin-top: 10px; padding-top: 10px; }
+      .help-box h3 { margin-bottom: 4px; font-size: 14px; }
+      .help-card { margin-top: 6px; padding: 7px 10px; gap: 10px; border-radius: 14px; }
+      .help-icon { width: 34px; height: 34px; border-radius: 10px; }
+      .help-icon svg { width: 20px; height: 20px; }
+      .help-title { font-size: 13px; }
+      .help-desc { font-size: 11px; }
+      .help-mail { margin-top: 1px; font-size: 12.5px; word-break: normal; overflow-wrap: anywhere; }
+      .help-ext { width: 16px; height: 16px; }
+      .help-card { gap: 8px; }
     }
   </style>
 </head>
@@ -284,13 +473,17 @@
 
   <main class="page">
     <div class="container">
-      <div class="card">
-
+      <header class="hero">
+        <svg class="leaf leaf-a" viewBox="0 0 120 120" aria-hidden="true"><path d="M0 120C0 50 50 0 120 0c0 70-50 120-120 120z" fill="#7cb342" opacity=".8"/></svg>
+        <svg class="leaf leaf-b" viewBox="0 0 120 120" aria-hidden="true"><path d="M120 120C120 50 70 0 0 0c0 70 50 120 120 120z" fill="#fbbf24"/></svg>
         <div class="brand">
           <div class="brand-mark">AT</div>
           <h1>Attendance Tracker</h1>
-          <p>Employee Attendance</p>
+          <p><span>Employee Attendance</span></p>
         </div>
+      </header>
+
+      <div class="card">
 
 
         <!-- REGISTRATION SCREEN -->
@@ -365,16 +558,21 @@
         <section id="employeeScreen" class="screen">
 
           <div class="welcome">
-            <div class="welcome-icon">✓</div>
+            <div class="welcome-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
             <h2 id="employeeName">Welcome</h2>
             <p id="employeeDate">Today</p>
           </div>
 
-          <div class="status-card">
-            <div class="status-label">Today's Attendance</div>
-            <div class="status-value" id="attendanceStatus">Not Marked</div>
-            <div class="status-note" id="attendanceStatusNote">
-              Your attendance has not been marked today.
+          <div class="status-card" id="statusCard" data-state="neutral">
+            <div class="status-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17M9 15l2.2 2.2L15.5 13"/></svg>
+            </div>
+            <div class="status-body">
+              <div class="status-label">Today's Attendance</div>
+              <div class="status-value" id="attendanceStatus">Not Marked</div>
+              <div class="status-note" id="attendanceStatusNote">
+                Your attendance has not been marked today.
+              </div>
             </div>
           </div>
 
@@ -389,29 +587,40 @@
 
           <div id="locationMessage" class="message" style="margin-top: 14px;"></div>
 
-          <div class="info-box">
-            Attendance can only be marked from the office.
+          <div class="info-box office-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6M12 7.5v.01"/></svg>
+            <span>Attendance can only be marked from the office.</span>
           </div>
 
           <div class="help-box">
-            <h3>Need help or want to raise a concern?</h3>
-
-            <div class="help-item">
-              <div class="help-title">Formal communication &amp; leave requests</div>
-              <a href="mailto:ckghrgoonj@gmail.com">ckghrgoonj@gmail.com</a>
-            </div>
-
-            <div class="help-item">
-              <div class="help-title">Internal Complaints Committee (POSH)</div>
-              <div class="help-desc">For any matter that may fall under the POSH Policy.</div>
-              <a href="mailto:iycwarroom.icc@gmail.com">iycwarroom.icc@gmail.com</a>
-            </div>
-
-            <div class="help-item">
-              <div class="help-title">Grievances</div>
-              <div class="help-desc">For any grievance or issue.</div>
-              <a href="mailto:iycwarroom.grievances@gmail.com">iycwarroom.grievances@gmail.com</a>
-            </div>
+            <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13" width="4" height="6" rx="1.5"/><rect x="17.5" y="13" width="4" height="6" rx="1.5"/><path d="M20 19c0 1.5-2 2.5-5 2.5"/></svg><span>Need help or want to raise a concern?</span></h3>
+            <a class="help-card" href="mailto:ckghrgoonj@gmail.com">
+              <span class="help-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M4 7.5l8 6 8-6"/></svg></span>
+              <span class="help-text">
+                <span class="help-title">Formal communication &amp; leave requests</span>
+                
+                <span class="help-mail">ckghrgoonj@gmail.com</span>
+              </span>
+              <svg class="help-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>
+            </a>
+            <a class="help-card" href="mailto:iycwarroom.icc@gmail.com">
+              <span class="help-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><circle cx="5.5" cy="10" r="2.2"/><circle cx="18.5" cy="10" r="2.2"/><path d="M6.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5M1.5 18c0-2 1.5-3.5 3.5-3.5M22.5 18c0-2-1.5-3.5-3.5-3.5"/></svg></span>
+              <span class="help-text">
+                <span class="help-title">Internal Complaints Committee (POSH)</span>
+                <span class="help-desc">For any matter that may fall under the POSH Policy.</span>
+                <span class="help-mail">iycwarroom.icc@gmail.com</span>
+              </span>
+              <svg class="help-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>
+            </a>
+            <a class="help-card" href="mailto:iycwarroom.grievances@gmail.com">
+              <span class="help-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg></span>
+              <span class="help-text">
+                <span class="help-title">Grievances</span>
+                <span class="help-desc">For any grievance or issue.</span>
+                <span class="help-mail">iycwarroom.grievances@gmail.com</span>
+              </span>
+              <svg class="help-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>
+            </a>
           </div>
 
         </section>
@@ -554,9 +763,25 @@
       });
     }
 
+    // Colours the status card: green = counted as present, red = problem.
+    (function () {
+      const card = document.getElementById('statusCard');
+      const label = document.getElementById('attendanceStatus');
+      if (!card || !label || !window.MutationObserver) { return; }
+      const good = ['present', 'wfh', 'half day'];
+      const bad = ['absent', 'unable to load', 'device not registered'];
+      function paint() {
+        const t = String(label.textContent || '').trim().toLowerCase();
+        card.dataset.state = good.indexOf(t) !== -1 ? 'good' : bad.indexOf(t) !== -1 ? 'bad' : 'neutral';
+      }
+      new MutationObserver(paint).observe(label, { childList: true, characterData: true, subtree: true });
+      paint();
+    })();
+
     function showEmployeeScreen(name) {
 
-      employeeName.textContent = 'Hello, ' + name;
+      employeeName.innerHTML = 'Hello, <strong></strong>';
+      employeeName.querySelector('strong').textContent = name;
 
       employeeDate.textContent = formatLongDate(new Date());
 
