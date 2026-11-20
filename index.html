@@ -466,6 +466,60 @@
       .help-ext { width: 16px; height: 16px; }
       .help-card { gap: 8px; }
     }
+
+    /* ===== Fit-to-screen layout (no empty scroll, content spread evenly) ===== */
+    html, body { height: 100%; overflow: hidden; }
+
+    .page {
+      position: fixed; inset: 0;
+      min-height: 0; padding: 0;
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .container {
+      min-height: 100%;
+      display: flex; flex-direction: column;
+    }
+
+    .hero { flex: 0 0 auto; }
+
+    .card {
+      flex: 1 1 auto;
+      display: flex; flex-direction: column;
+      margin-bottom: 12px;
+    }
+
+    #employeeScreen.active {
+      flex: 1 1 auto;
+      display: flex; flex-direction: column;
+      justify-content: space-evenly;
+    }
+
+    #registrationScreen.active {
+      flex: 1 1 auto;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+
+    .office-note.is-hidden { display: none !important; }
+
+    /* Short phones: tighten so everything still fits without scrolling */
+    @media (max-height: 740px) {
+      .hero { padding-bottom: 34px; }
+      .hero .leaf { display: none; }
+      .brand-mark { width: 32px; height: 32px; margin-bottom: 4px; font-size: 13px; }
+      .brand h1 { font-size: 18px; }
+      .welcome-icon { width: 34px; height: 34px; }
+      .welcome-icon svg { width: 18px; height: 18px; }
+      .help-desc { display: none; }
+      .help-card { margin-top: 5px; padding: 6px 10px; }
+    }
+
+    @media (max-height: 640px) {
+      .welcome-icon { display: none; }
+      .status-note { display: none; }
+      .help-box h3 { font-size: 13px; }
+    }
   </style>
 </head>
 
@@ -773,6 +827,9 @@
       function paint() {
         const t = String(label.textContent || '').trim().toLowerCase();
         card.dataset.state = good.indexOf(t) !== -1 ? 'good' : bad.indexOf(t) !== -1 ? 'bad' : 'neutral';
+        // The "only from the office" reminder is only useful before marking.
+        const note = document.querySelector('.office-note');
+        if (note) { note.classList.toggle('is-hidden', t !== 'not marked'); }
       }
       new MutationObserver(paint).observe(label, { childList: true, characterData: true, subtree: true });
       paint();
