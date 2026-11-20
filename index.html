@@ -234,6 +234,16 @@
     }
 
     .status-value { margin-top: 8px; font-size: 16px; font-weight: 600; }
+
+    /* Help / contact card (employee screen) */
+    .help-box { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); text-align: left; }
+    .help-box h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .help-item + .help-item { margin-top: 12px; }
+    .help-item .help-title { font-size: 12px; font-weight: 600; color: var(--text); }
+    .help-item .help-desc { margin: 2px 0 3px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .help-item a { font-size: 13px; font-weight: 600; color: #4f46e5; text-decoration: none; word-break: break-all; }
+    .help-item a:active { text-decoration: underline; }
+
     .status-note { margin-top: 5px; color: var(--muted); font-size: 12px; }
 
     @media (max-width: 520px) {
@@ -354,6 +364,22 @@
 
           <div class="info-box">
             Attendance can only be marked from the office.
+          </div>
+
+          <div class="help-box">
+            <h3>Need help or want to raise a concern?</h3>
+
+            <div class="help-item">
+              <div class="help-title">Internal Complaints Committee (POSH)</div>
+              <div class="help-desc">For any matter that may fall under the POSH Policy.</div>
+              <a href="mailto:iycwarroom.icc@gmail.com">iycwarroom.icc@gmail.com</a>
+            </div>
+
+            <div class="help-item">
+              <div class="help-title">Grievances</div>
+              <div class="help-desc">For any other grievance or issue.</div>
+              <a href="mailto:iycwarroom.grievances@gmail.com">iycwarroom.grievances@gmail.com</a>
+            </div>
           </div>
 
         </section>
