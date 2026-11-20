@@ -237,11 +237,11 @@
 
     /* Help / contact card (employee screen) */
     .help-box { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); text-align: left; }
-    .help-box h3 { margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .help-box h3 { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: var(--text); }
     .help-item + .help-item { margin-top: 12px; }
-    .help-item .help-title { font-size: 12px; font-weight: 600; color: var(--text); }
+    .help-item .help-title { font-size: 14px; font-weight: 700; color: var(--text); }
     .help-item .help-desc { margin: 2px 0 3px; font-size: 12px; color: var(--muted); line-height: 1.45; }
-    .help-item a { font-size: 13px; font-weight: 600; color: #4f46e5; text-decoration: none; word-break: break-all; }
+    .help-item a { font-size: 14px; font-weight: 600; color: #4f46e5; text-decoration: none; word-break: break-all; }
     .help-item a:active { text-decoration: underline; }
 
     .status-note { margin-top: 5px; color: var(--muted); font-size: 12px; }
@@ -251,7 +251,9 @@
         padding: 10px;
         padding-top: calc(10px + env(safe-area-inset-top, 0px));
         padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-        align-items: flex-start;
+        align-items: center;
+        min-height: 100vh;
+        min-height: 100dvh;
       }
       .card { padding: 18px 20px 20px; border-radius: 20px; }
       .brand { margin-bottom: 14px; }
@@ -396,7 +398,7 @@
 
             <div class="help-item">
               <div class="help-title">Grievances</div>
-              <div class="help-desc">For any other grievance or issue.</div>
+              <div class="help-desc">For any grievance or issue.</div>
               <a href="mailto:iycwarroom.grievances@gmail.com">iycwarroom.grievances@gmail.com</a>
             </div>
           </div>
