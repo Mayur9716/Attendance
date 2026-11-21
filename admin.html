@@ -1223,6 +1223,30 @@
 
     .date-chip svg { stroke: #fff; }
 
+    /* ---------- Device tab: compact forms on the left, QR on the right ---------- */
+    .devices-layout { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+    .devices-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .devices-main .dashboard-section { margin: 0; }
+    .devices-main .section-header { padding: 14px 20px 10px; }
+    .devices-main .section-title p { margin-top: 2px; }
+    .devices-main .device-registration { padding: 14px 20px 18px; }
+    .devices-main .stack-gap { margin-top: 10px; }
+    .devices-main .info-note { padding: 9px 12px; font-size: 12px; }
+    .devices-main .registration-code-result { padding: 14px; margin-top: 12px; }
+    .devices-main .registration-code-value { margin-bottom: 4px; }
+    .devices-main .registration-code-expiry { margin-bottom: 8px; }
+    .devices-qr { margin: 0; padding: 18px; text-align: center; position: sticky; top: 16px; }
+    .devices-qr-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+    .devices-qr-img {
+      display: block; width: 100%; max-width: 220px; height: auto; margin: 0 auto; background: #fff;
+      border-radius: 12px; padding: 6px; image-rendering: pixelated;
+    }
+    .devices-qr-note { margin-top: 12px; font-size: 12px; line-height: 1.5; color: var(--text-2, #b6b9d6); }
+    @media (max-width: 900px) {
+      .devices-layout { grid-template-columns: 1fr; }
+      .devices-qr { position: static; order: -1; }
+    }
+
     .dashboard-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .date-chip { cursor: pointer; }
     .date-chip input[type="date"] {
@@ -2144,6 +2168,9 @@
 
       <section class="tab-panel" id="panel-devices" role="tabpanel">
 
+      <div class="devices-layout">
+      <div class="devices-main">
+
         <div class="dashboard-section">
 
           <div class="section-header">
@@ -2224,9 +2251,8 @@
             </div>
 
             <div class="info-note stack-gap">
-              Only employees who currently have a registered device are listed.
-              After deregistering, generate a new registration code for the
-              employee in the <strong>Device Registration</strong> section above.
+              Only employees with a registered device are listed. After deregistering,
+              generate a new code in <strong>Device Registration</strong> above.
               The old device record is kept in the history.
             </div>
 
@@ -2235,6 +2261,17 @@
           </div>
 
         </div>
+
+      </div>
+
+      <aside class="dashboard-section devices-qr" aria-label="Employee QR code">
+        <div class="devices-qr-title">Employee QR Code</div>
+        <img class="devices-qr-img" alt="QR code that opens the attendance page" width="220" height="220"
+          src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbgAAAG4AQAAAAAfsc8eAAACxklEQVR42u2cQa6jMBBEq5IvkR25AdyE3Cz5NyM3CTcIO5ACNQsbQ6JZjL5mgWfKqwT8Np1Wq1zdMYUfrQPMmTNnzpy5v8dB0mvztZEkvVBJkoRCmgFcP/c4nub2zH0BAKpH+DaelucdUQxdLQAUgOljj+Npbv95DRAABCBW4uqBkZVYDOvetMfxNPefcR15AqCeF/HsuJjbIVeDJ9wP6Hn7I+4adXkLFGodT3O74Pj+aiSJkZf04LbZs+iXjQ1aPjFtec4AJgDXq38HczlxHcOKx83vQncCqBTqdc/b5x7H09zez5vHbc9K6HkdGdM9vTnK8TSXm+9d6d33lh5AoQc0ANRz43vH946nuf3X6y7K7WLANmMrEYCSXi8GAOOpaR1Pc3nU67CG5Icsbwc00hM4hgqeluNpbu95LT3WzzPKbZIXainplmRKTG7H01x+cyVJZGtAM6PU7RjFtvW1uZzyOiT3Oh1VhcIMbJVJEcq456XM5ZXXQDMDuGpJaUkt9fzULc5rc5lwr5/ocmnp3iy6PJ4uU+VPmsa63Fwm3ERSL3RUT6bpE/WsoZ4XSuIXOmIkGb0Wx9Pc/rlKOEpiGeo1yTr0c3jCnSQ1sgZLtYgTKo6nuWz6lBuXe7UN3zqXrXW5uaz6OdE6aanlBDr83lmxvjaXYb2Op8QHFt97s+IQt/1Bc3n0KTdrBoIOCbIbcV5KGxPceW0uFz9kWRfqievIGgA6akAz8QxM4Ulwwh1Pc5n4IWmURDwDR90Z/JAy9nPSvJT9EHMZcSQZP5fiFyqpX0o0gG+SBHBnFNmHt78wOJ7mdn9uLKMfEruLS71ex1+tr81lyPW8xXNjx6BMKmlMf4ksrK/N/fPcMlyC1G0nWYMnNDN6sliaO46nOeRyL1W3XgWhQ/nEFK6k6mqMbFqt+vtO30tlLgOOvq/ZnDlz5sztgPsFa1s3Jz4EGeUAAAAASUVORK5CYII=">
+        <div class="devices-qr-note">Employees scan this to open the attendance page, then enter the registration code you generate here.</div>
+      </aside>
+
+      </div>
 
       </section>
 
