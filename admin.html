@@ -1223,6 +1223,22 @@
 
     .date-chip svg { stroke: #fff; }
 
+    .dashboard-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .date-chip { cursor: pointer; }
+    .date-chip input[type="date"] {
+      background: transparent; border: 0; outline: 0; color: #fff; font: inherit; font-size: 17px;
+      font-weight: 600; color-scheme: dark; cursor: pointer; padding: 0; min-width: 150px;
+    }
+    .dashboard-refresh {
+      display: inline-flex; align-items: center; gap: 10px; height: 58px; padding: 0 22px; border-radius: 15px;
+      font: inherit; font-size: 17px; font-weight: 600; color: #fff; cursor: pointer;
+      background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(129, 140, 248, 0.55);
+    }
+    .dashboard-refresh:hover { background: rgba(99, 102, 241, 0.4); }
+    .dashboard-refresh svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .dashboard-refresh.is-loading svg { animation: dashSpin 0.8s linear infinite; }
+    @keyframes dashSpin { to { transform: rotate(360deg); } }
+
     /* ---------- Stat cards ---------- */
     .dashboard-grid { gap: 20px; }
 
@@ -1791,9 +1807,14 @@
             <p id="dashboardSubtitle">Today's attendance overview.</p>
           </div>
 
-          <div class="date-chip">
-            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span id="dashboardDateChip">—</span>
+          <div class="dashboard-header-actions">
+            <label class="date-chip" for="dashboardDate" title="Pick a date">
+              <input type="date" id="dashboardDate" aria-label="Dashboard date">
+            </label>
+            <button type="button" class="dashboard-refresh" id="dashboardRefresh" title="Refresh the dashboard">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Refresh</span>
+            </button>
           </div>
         </div>
 
@@ -3360,6 +3381,8 @@
 
     function setDashboardLoading(isLoading) {
 
+      $('dashboardRefresh').classList.toggle('is-loading', !!isLoading);
+
       if (isLoading) {
 
         monthlyTableLoading.style.display = 'block';
@@ -3401,6 +3424,11 @@
     /*************************************************
      * LOAD DASHBOARD (today cards + monthly table)
      *************************************************/
+
+    function todayKeyLocal() {
+      const n = new Date();
+      return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+    }
 
     function loadDashboard(selectedYear, selectedMonth) {
 
@@ -3453,10 +3481,21 @@
         .getDashboardSummary(
           session.sessionToken,
           selectedYear,
-          selectedMonth
+          selectedMonth,
+          $('dashboardDate').value || ''
         );
 
     }
+
+    $('dashboardDate').addEventListener('change', function() {
+      const selected = getSelectedYearMonth();
+      loadDashboard(selected.year, selected.month);
+    });
+
+    $('dashboardRefresh').addEventListener('click', function() {
+      const selected = getSelectedYearMonth();
+      loadDashboard(selected.year, selected.month);
+    });
 
     /*************************************************
      * TODAY'S STATUS — donut chart, bar and legend
@@ -3518,7 +3557,9 @@
 
       $('donutTotal').textContent = today.totalEmployees ?? sum;
 
-      $('dashboardDateChip').textContent = formatDisplayDate(today.date);
+      const dateInput = $('dashboardDate');
+      dateInput.value = today.date;
+      dateInput.max = todayKeyLocal();
 
     }
 
@@ -3543,7 +3584,8 @@
       renderTodayBreakdown(today);
 
       dashboardSubtitle.textContent =
-        "Today's attendance overview — " + formatDisplayDate(today.date);
+        (today.date === todayKeyLocal() ? "Today's" : 'Daily') +
+        ' attendance overview — ' + formatDisplayDate(today.date);
 
       if (today.isWorkingDay) {
 
