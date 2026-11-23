@@ -3530,8 +3530,7 @@
     });
 
     $('dashboardRefresh').addEventListener('click', function() {
-      const selected = getSelectedYearMonth();
-      loadDashboard(selected.year, selected.month);
+      refreshAll($('dashboardRefresh'));
     });
 
     /*************************************************
@@ -3919,15 +3918,7 @@
 
     lateReportRefreshButton.addEventListener('click', function() {
 
-      lateReportRefreshButton.disabled = true;
-      lateReportRefreshButton.textContent = 'Refreshing…';
-
-      loadLateReport();
-
-      window.setTimeout(function() {
-        lateReportRefreshButton.disabled = false;
-        lateReportRefreshButton.textContent = 'Refresh';
-      }, 1200);
+      refreshAll(lateReportRefreshButton);
 
     });
 
@@ -3938,17 +3929,26 @@
 
     function refreshAll(button) {
 
+      // Every Refresh button reloads everything: Dashboard, Monthly Report,
+      // Daily Attendance, Late Report and the employee / device lists.
       const selected = getSelectedYearMonth();
+      const keepLabel = button.id === 'dashboardRefresh';
 
       button.disabled = true;
-      button.textContent = 'Refreshing…';
+      if (!keepLabel) { button.textContent = 'Refreshing…'; }
 
       loadDashboard(selected.year, selected.month);
       loadDailyAttendance(dailyAttendanceDate.value);
+      loadLateReport();
+      loadEmployeeLists();
+
+      if (currentRoleKey() !== 'viewer') {
+        loadRevocableDevices();
+      }
 
       window.setTimeout(function() {
         button.disabled = false;
-        button.textContent = 'Refresh';
+        if (!keepLabel) { button.textContent = 'Refresh'; }
       }, 1200);
 
     }
